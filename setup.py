@@ -7,8 +7,8 @@ import setuptools
 from setuptools import setup
 
 setup(
-    name='job-logger',
-    version='1.0.1',
+    name='awsresourcelister',
+    version='1.0.0',
     packages=setuptools.find_packages(),
     url='',
     author='Cominoli Luca, Dalle Fratte Andrea',
