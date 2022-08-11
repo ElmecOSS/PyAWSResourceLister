@@ -1,23 +1,22 @@
 from datetime import datetime, timedelta, timezone
 # Importazione delle classi specifiche per servizio
-from cw_services.cw_elb import CloudWatchELB, CloudWatchELBTG
-from cw_services.cw_ec2 import CloudWatchEC2
-from cw_services.cw_ebs import CloudWatchEBS
-from cw_services.cw_efs import CloudWatchEFS
-from cw_services.cw_rds import CloudWatchRDS
-from cw_services.cw_eks import CloudWatchEKS
-from cw_services.cw_vpn import CloudWatchVPN
-from cw_services.cw_os import CloudWatchOS
-from cw_services.cw_acm import CloudWatchACM
+# from cw_services.cw_elb import CloudWatchELB, CloudWatchELBTG
+# from cw_services.cw_ec2 import CloudWatchEC2
+# from cw_services.cw_ebs import CloudWatchEBS
+# from cw_services.cw_efs import CloudWatchEFS
+# from cw_services.cw_rds import CloudWatchRDS
+# from cw_services.cw_eks import CloudWatchEKS
+# from cw_services.cw_vpn import CloudWatchVPN
+# from cw_services.cw_os import CloudWatchOS
+# from cw_services.cw_acm import CloudWatchACM
 
 
 class ResourceLister:
-    def __init__(self, cloudwatchclient, filter_tag_key, filter_tag_value, filters, callback):
-        self.cloudwatchclient = cloudwatchclient
+    def __init__(self, filter_tag_key, filter_tag_value):
         self.filter_tag_key = filter_tag_key
         self.filter_tag_value = filter_tag_value
 
-    def list_acm(self, client, default_values, filters, callback):
+    def list_acm(self, client, filters, callback, callback_params):
         print(f"start list acm {datetime.now()}")
         certificates_list = []
         renewal_eligibility_status = "INELIGIBLE"
@@ -55,10 +54,12 @@ class ResourceLister:
                             break
 
         print(f"end list acm {datetime.now()}")
-        for acm in certificates_list:
-            CloudWatchACM(acm, self.cloudwatchclient, default_values)
+        if callback:
+            callback(certificates_list, *callback_params)
+        # for acm in certificates_list:
+        #     CloudWatchACM(acm, self.cloudwatchclient)
 
-    def list_ebs(self, client, default_values, filters, callback):
+    def list_ebs(self, client, filters, callback, callback_params):
         print(f"start list_ebs {datetime.now()}")
         tmp_volumes = []
         next_token = ""
@@ -91,11 +92,13 @@ class ResourceLister:
                 volumes_list.append(vol)
 
         print(f"end list_ebs {datetime.now()}")
-        for ebs in volumes_list:
-            CloudWatchEBS(ebs, self.cloudwatchclient, default_values)
+        # for ebs in volumes_list:
+        #     CloudWatchEBS(ebs, self.cloudwatchclient)
+        if callback:
+            callback(volumes_list, *callback_params)
 
     # Estrazione lista EC2 con tag predefinito
-    def list_ec2(self, client, default_values, filters, callback):
+    def list_ec2(self, client, filters, callback, callback_params):
         print(f"start list_ec2 {datetime.now()}")
         instances_list = []
 
@@ -110,11 +113,13 @@ class ResourceLister:
                 instances_list.extend(reservation["Instances"])
 
         print(f"end list_ec2 {datetime.now()}")
-        for ec2 in instances_list:
-            CloudWatchEC2(ec2, self.cloudwatchclient, default_values)
+        # for ec2 in instances_list:
+        #     CloudWatchEC2(ec2, self.cloudwatchclient)
+        if callback:
+            callback(instances_list, *callback_params)
 
     # Estrazione lista EFS con tag predefinito
-    def list_efs(self, client, default_values, filters, callback):
+    def list_efs(self, client, filters, callback, callback_params):
         print(f"start list_efs {datetime.now()}")
         # Estrazione elenco filesystem
         filesystems = []  # client.describe_file_systems()
@@ -130,10 +135,12 @@ class ResourceLister:
                 if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                     filesystem_list.append(filesystem)
         print(f"end list_efs {datetime.now()}")
-        for efs in filesystem_list:
-            CloudWatchEFS(efs, self.cloudwatchclient, default_values)
+        # for efs in filesystem_list:
+        #     CloudWatchEFS(efs, self.cloudwatchclient)
+        if callback:
+            callback(filesystem_list, *callback_params)
 
-    def list_eks(self, client, default_values, filters, callback):
+    def list_eks(self, client, filters, callback, callback_params):
         print(f"start list_eks {datetime.now()}")
         clusters = []
         next_token = ""
@@ -150,11 +157,13 @@ class ResourceLister:
                 if tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
                     cluster_list.append(local_cluster)
         print(f"end list_eks {datetime.now()}")
-        for eks in cluster_list:
-            CloudWatchEKS(eks, self.cloudwatchclient, default_values)
+        # for eks in cluster_list:
+        #     CloudWatchEKS(eks, self.cloudwatchclient)
+        if callback:
+            callback(cluster_list, *callback_params)
 
     # Estrazione lista ALB con tag predefinito
-    def list_elb(self, client, default_values_alb, default_values_nlb, filters, callback):
+    def list_elb(self, client, default_values_nlb, filters, callback, callback_params):
         print(f"start list_elb {datetime.now()}")
         # Estrazione elenco bilanciatori
         loadbalancers = []
@@ -196,14 +205,16 @@ class ResourceLister:
                         break
                 tags.pop(index_lb_tag)
         print(f"end list_elb {datetime.now()}")
-        for alb in alb_list:
-            CloudWatchELB(alb, self.cloudwatchclient, default_values_alb)
-        for nlb in nlb_list:
-            CloudWatchELB(nlb, self.cloudwatchclient, default_values_nlb)
+        # for alb in alb_list:
+        #     CloudWatchELB(alb, self.cloudwatchclient_alb)
+        # for nlb in nlb_list:
+        #     CloudWatchELB(nlb, self.cloudwatchclient_nlb)
+        if callback:
+            callback(alb_list, nlb_list, *callback_params)
 
     
     # Estrazione lista Target Groups (sia per gli ALB che per gli NLB) con tag predefinito
-    def list_elbtg(self, client, default_values_albtg, default_values_nlbtg, filters, callback):
+    def list_elbtg(self, client, default_values_nlbtg, filters, callback, callback_params):
         print(f"start list_elbtg {datetime.now()}")
         # Recupero i tag del target group così da estrarne il nome
         # Mappa elbarn: [tg_con_quell_arn, ...]
@@ -258,6 +269,8 @@ class ResourceLister:
             targetgroups_tags = client.describe_tags(
                 ResourceArns=targetgroups_arn)["TagDescriptions"]
 
+        alb_tg_list = []
+        nlb_tg_list = []
         for tg in targetgroups:
             index_tg_tag = -1
             for index, taglist in enumerate(targetgroups_tags):
@@ -279,13 +292,15 @@ class ResourceLister:
                 tg["Tags"] = targetgroups_tags[index_tg_tag]["Tags"]
 
                 if tg["ELBType"] == "application":
-                    CloudWatchELBTG(tg, self.cloudwatchclient, default_values_albtg)
+                    alb_tg_list.append(tg)
                 elif tg["ELBType"] == "network":
-                    CloudWatchELBTG(tg, self.cloudwatchclient, default_values_nlbtg)
+                    nlb_tg_list.append(tg)
                 targetgroups_tags.pop(index_tg_tag)
+        if callback:
+            callback(alb_tg_list, nlb_tg_list, targetgroups_tags, *callback_params)
         print(f"end list_elbtg {datetime.now()}")
 
-    def list_os(self, client, default_values, filters, callback):
+    def list_os(self, client, filters, callback, callback_params):
         print(f"start list_os {datetime.now()}")
         domains_list = []
 
@@ -301,12 +316,14 @@ class ResourceLister:
                         domains_list.append(os_details)
                         break
         print(f"end list_os {datetime.now()}")
-        for os in domains_list:
-            CloudWatchOS(os, self.cloudwatchclient, default_values)
+        # for os in domains_list:
+        #     CloudWatchOS(os, self.cloudwatchclient)
+        if callback:
+            callback(domains_list, *callback_params)
 
     
     # Estrazione lista RDS con tag predefinito
-    def list_rds(self, client, default_values, filters, callback):
+    def list_rds(self, client, filters, callback, callback_params):
         print(f"start list_rds {datetime.now()}")
         # Estrazione elenco istanze
         databasesinstances = []
@@ -335,13 +352,13 @@ class ResourceLister:
                     database_list.append(database)
 
         print(f"end list_rds {datetime.now()}")
-        for rds in database_list:
-            CloudWatchRDS(rds, self.cloudwatchclient, default_values)
+        # for rds in database_list:
+        #     CloudWatchRDS(rds, self.cloudwatchclient)
+        if callback:
+            callback(database_list, *callback_params)
 
-  
-
-    
-    def list_vpn(self, client, default_values, filters, callback):
+   
+    def list_vpn(self, client, filters, callback, callback_params):
         print(f"start list_vpn {datetime.now()}")
         vpn_list = []
 
@@ -353,8 +370,10 @@ class ResourceLister:
                     break
 
         print(f"end list_vpn {datetime.now()}")
-        for vpn in vpn_list:
-            CloudWatchVPN(vpn, self.cloudwatchclient, default_values)
+        # for vpn in vpn_list:
+        #     CloudWatchVPN(vpn, self.cloudwatchclient)
+        if callback:
+            callback(vpn_list, *callback_params)
 
     
 
