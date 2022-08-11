@@ -8,7 +8,7 @@ from setuptools import setup
 
 setup(
     name='awsresourcelister',
-    version='1.0.0',
+    version='0.0.1',
     packages=setuptools.find_packages(),
     url='',
     author='Cominoli Luca, Dalle Fratte Andrea',
