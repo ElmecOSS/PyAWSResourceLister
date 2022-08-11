@@ -163,7 +163,7 @@ class ResourceLister:
             callback(cluster_list, *callback_params)
 
     # Estrazione lista ALB con tag predefinito
-    def list_elb(self, client, default_values_nlb, filters, callback, callback_params):
+    def list_elb(self, client, filters, callback, callback_params):
         print(f"start list_elb {datetime.now()}")
         # Estrazione elenco bilanciatori
         loadbalancers = []
@@ -214,7 +214,7 @@ class ResourceLister:
 
     
     # Estrazione lista Target Groups (sia per gli ALB che per gli NLB) con tag predefinito
-    def list_elbtg(self, client, default_values_nlbtg, filters, callback, callback_params):
+    def list_elbtg(self, client, filters, callback, callback_params):
         print(f"start list_elbtg {datetime.now()}")
         # Recupero i tag del target group così da estrarne il nome
         # Mappa elbarn: [tg_con_quell_arn, ...]
