@@ -12,13 +12,90 @@ from cw_services.cw_acm import CloudWatchACM
 
 
 class ResourceLister:
-    def __init__(self, cloudwatchclient, filter_tag_key, filter_tag_value):
+    def __init__(self, cloudwatchclient, filter_tag_key, filter_tag_value, filters, callback):
         self.cloudwatchclient = cloudwatchclient
         self.filter_tag_key = filter_tag_key
         self.filter_tag_value = filter_tag_value
 
+    def list_acm(self, client, default_values, filters, callback):
+        print(f"start list acm {datetime.now()}")
+        certificates_list = []
+        renewal_eligibility_status = "INELIGIBLE"
+
+        # Scarico il primo blocco di certificati (non è possibile mettere tutto in un unico while siccome il metodo list_certificates non accetta NextToken come stringa vuota)
+        certificates_resp = client.list_certificates()
+        next_token = certificates_resp.get("NextToken", None)
+        for ca in certificates_resp["CertificateSummaryList"]:
+            cert_detail = client.describe_certificate(
+                CertificateArn=ca["CertificateArn"])["Certificate"]
+
+            if cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
+                ca_tags = client.list_tags_for_certificate(
+                    CertificateArn=ca["CertificateArn"])["Tags"]
+                for tag in ca_tags:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        certificates_list.append(ca)
+                        break
+
+        # Scarico eventuali nuovi certificati
+        while next_token is not None:
+            certificates_resp = client.list_certificates(NextToken=next_token)
+            next_token = certificates_resp.get("NextToken", None)
+
+            for ca in certificates_resp["CertificateSummaryList"]:
+                cert_detail = client.describe_certificate(
+                    CertificateArn=ca["CertificateArn"])["Certificate"]
+
+                if cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
+                    ca_tags = client.list_tags_for_certificate(
+                        CertificateArn=ca["CertificateArn"])["Tags"]
+                    for tag in ca_tags:
+                        if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                            certificates_list.append(ca)
+                            break
+
+        print(f"end list acm {datetime.now()}")
+        for acm in certificates_list:
+            CloudWatchACM(acm, self.cloudwatchclient, default_values)
+
+    def list_ebs(self, client, default_values, filters, callback):
+        print(f"start list_ebs {datetime.now()}")
+        tmp_volumes = []
+        next_token = ""
+        while next_token is not None:
+            ebs_resp = client.describe_volumes(
+                NextToken=next_token,
+                Filters=[{"Name": "tag:" + self.filter_tag_key, "Values": [self.filter_tag_value]},
+                         {"Name": "status", "Values": ["in-use"]}])
+            next_token = ebs_resp.get("NextToken", None)
+            tmp_volumes.extend(ebs_resp["Volumes"])
+
+        volumes_list = []
+        for vol in tmp_volumes:
+            # Filtra solo i dischi creati almeno da 30 minuti
+            date_to_compare = (vol["CreateTime"].replace(
+                tzinfo=timezone.utc) + timedelta(minutes=30))
+            my_date = datetime.now(timezone.utc)
+            if date_to_compare < my_date:
+                for attachment in vol["Attachments"]:
+                    if attachment["State"] == "attached":
+                        ec2_tags = client.describe_instances(
+                            InstanceIds=[attachment["InstanceId"]])["Reservations"][0]["Instances"][0]["Tags"]
+                        ec2_name = ""
+                        for tag in ec2_tags:
+                            if tag["Key"] == "Name":
+                                ec2_name = tag["Value"]
+                                break
+                        break
+                vol["EC2Name"] = ec2_name
+                volumes_list.append(vol)
+
+        print(f"end list_ebs {datetime.now()}")
+        for ebs in volumes_list:
+            CloudWatchEBS(ebs, self.cloudwatchclient, default_values)
+
     # Estrazione lista EC2 con tag predefinito
-    def list_ec2(self, client, default_values):
+    def list_ec2(self, client, default_values, filters, callback):
         print(f"start list_ec2 {datetime.now()}")
         instances_list = []
 
@@ -26,8 +103,7 @@ class ResourceLister:
         while next_token is not None:
             ec2_resp = client.describe_instances(
                 NextToken=next_token,
-                Filters=[{"Name": "tag:" + self.filter_tag_key, "Values": [self.filter_tag_value]},
-                         {"Name": "instance-state-name", "Values": ["pending", "running", "stopping", "stopped"]}])
+                Filters=filters)
             next_token = ec2_resp.get("NextToken", None)
 
             for reservation in ec2_resp["Reservations"]:
@@ -37,43 +113,8 @@ class ResourceLister:
         for ec2 in instances_list:
             CloudWatchEC2(ec2, self.cloudwatchclient, default_values)
 
-    
-    # Estrazione lista RDS con tag predefinito
-    def list_rds(self, client, default_values):
-        print(f"start list_rds {datetime.now()}")
-        # Estrazione elenco istanze
-        databasesinstances = []
-        paginator = client.get_paginator("describe_db_instances")
-        pages = paginator.paginate()
-        for page in pages:
-            databasesinstances.extend(page["DBInstances"])
-
-        # Estrazione elenco cluster
-        databasesclusters = []
-        paginator = client.get_paginator("describe_db_clusters")
-        pages = paginator.paginate()
-        for page in pages:
-            databasesclusters.extend(page["DBClusters"])
-
-        database_list = []
-        # Verifica istanze con tag da filtrare tra quelli estratti
-        for database in databasesinstances:
-            for tag in database["TagList"]:
-                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                    database_list.append(database)
-        # Verifica cluster con tag da filtrare tra quelli estratti
-        for database in databasesclusters:
-            for tag in database["TagList"]:
-                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                    database_list.append(database)
-
-        print(f"end list_rds {datetime.now()}")
-        for rds in database_list:
-            CloudWatchRDS(rds, self.cloudwatchclient, default_values)
-
-    
     # Estrazione lista EFS con tag predefinito
-    def list_efs(self, client, default_values):
+    def list_efs(self, client, default_values, filters, callback):
         print(f"start list_efs {datetime.now()}")
         # Estrazione elenco filesystem
         filesystems = []  # client.describe_file_systems()
@@ -92,9 +133,28 @@ class ResourceLister:
         for efs in filesystem_list:
             CloudWatchEFS(efs, self.cloudwatchclient, default_values)
 
-    
+    def list_eks(self, client, default_values, filters, callback):
+        print(f"start list_eks {datetime.now()}")
+        clusters = []
+        next_token = ""
+        while next_token is not None:
+            eks_resp = client.list_clusters(nextToken=next_token)
+            next_token = eks_resp.get("nextToken", None)
+            clusters.extend(eks_resp["clusters"])
+
+        cluster_list = []
+        for cluster in clusters:
+            local_cluster = client.describe_cluster(name=cluster)["cluster"]
+            if local_cluster is not None:
+                tags = local_cluster["tags"]
+                if tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
+                    cluster_list.append(local_cluster)
+        print(f"end list_eks {datetime.now()}")
+        for eks in cluster_list:
+            CloudWatchEKS(eks, self.cloudwatchclient, default_values)
+
     # Estrazione lista ALB con tag predefinito
-    def list_elb(self, client, default_values_alb, default_values_nlb):
+    def list_elb(self, client, default_values_alb, default_values_nlb, filters, callback):
         print(f"start list_elb {datetime.now()}")
         # Estrazione elenco bilanciatori
         loadbalancers = []
@@ -143,7 +203,7 @@ class ResourceLister:
 
     
     # Estrazione lista Target Groups (sia per gli ALB che per gli NLB) con tag predefinito
-    def list_elbtg(self, client, default_values_albtg, default_values_nlbtg):
+    def list_elbtg(self, client, default_values_albtg, default_values_nlbtg, filters, callback):
         print(f"start list_elbtg {datetime.now()}")
         # Recupero i tag del target group così da estrarne il nome
         # Mappa elbarn: [tg_con_quell_arn, ...]
@@ -225,124 +285,7 @@ class ResourceLister:
                 targetgroups_tags.pop(index_tg_tag)
         print(f"end list_elbtg {datetime.now()}")
 
-    
-    def list_ebs(self, client, default_values):
-        print(f"start list_ebs {datetime.now()}")
-        tmp_volumes = []
-        next_token = ""
-        while next_token is not None:
-            ebs_resp = client.describe_volumes(
-                NextToken=next_token,
-                Filters=[{"Name": "tag:" + self.filter_tag_key, "Values": [self.filter_tag_value]},
-                         {"Name": "status", "Values": ["in-use"]}])
-            next_token = ebs_resp.get("NextToken", None)
-            tmp_volumes.extend(ebs_resp["Volumes"])
-
-        volumes_list = []
-        for vol in tmp_volumes:
-            # Filtra solo i dischi creati almeno da 30 minuti
-            date_to_compare = (vol["CreateTime"].replace(
-                tzinfo=timezone.utc) + timedelta(minutes=30))
-            my_date = datetime.now(timezone.utc)
-            if date_to_compare < my_date:
-                for attachment in vol["Attachments"]:
-                    if attachment["State"] == "attached":
-                        ec2_tags = client.describe_instances(
-                            InstanceIds=[attachment["InstanceId"]])["Reservations"][0]["Instances"][0]["Tags"]
-                        ec2_name = ""
-                        for tag in ec2_tags:
-                            if tag["Key"] == "Name":
-                                ec2_name = tag["Value"]
-                                break
-                        break
-                vol["EC2Name"] = ec2_name
-                volumes_list.append(vol)
-
-        print(f"end list_ebs {datetime.now()}")
-        for ebs in volumes_list:
-            CloudWatchEBS(ebs, self.cloudwatchclient, default_values)
-
-    
-    def list_eks(self, client, default_values):
-        print(f"start list_eks {datetime.now()}")
-        clusters = []
-        next_token = ""
-        while next_token is not None:
-            eks_resp = client.list_clusters(nextToken=next_token)
-            next_token = eks_resp.get("nextToken", None)
-            clusters.extend(eks_resp["clusters"])
-
-        cluster_list = []
-        for cluster in clusters:
-            local_cluster = client.describe_cluster(name=cluster)["cluster"]
-            if local_cluster is not None:
-                tags = local_cluster["tags"]
-                if tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
-                    cluster_list.append(local_cluster)
-        print(f"end list_eks {datetime.now()}")
-        for eks in cluster_list:
-            CloudWatchEKS(eks, self.cloudwatchclient, default_values)
-
-    
-    def list_vpn(self, client, default_values):
-        print(f"start list_vpn {datetime.now()}")
-        vpn_list = []
-
-        vpn_connections = client.describe_vpn_connections()["VpnConnections"]
-        for vpn in vpn_connections:
-            for tag in vpn["Tags"]:
-                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                    vpn_list.append(vpn)
-                    break
-
-        print(f"end list_vpn {datetime.now()}")
-        for vpn in vpn_list:
-            CloudWatchVPN(vpn, self.cloudwatchclient, default_values)
-
-    
-    def list_acm(self, client, default_values):
-        print(f"start list acm {datetime.now()}")
-        certificates_list = []
-        renewal_eligibility_status = "INELIGIBLE"
-
-        # Scarico il primo blocco di certificati (non è possibile mettere tutto in un unico while siccome il metodo list_certificates non accetta NextToken come stringa vuota)
-        certificates_resp = client.list_certificates()
-        next_token = certificates_resp.get("NextToken", None)
-        for ca in certificates_resp["CertificateSummaryList"]:
-            cert_detail = client.describe_certificate(
-                CertificateArn=ca["CertificateArn"])["Certificate"]
-
-            if cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
-                ca_tags = client.list_tags_for_certificate(
-                    CertificateArn=ca["CertificateArn"])["Tags"]
-                for tag in ca_tags:
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        certificates_list.append(ca)
-                        break
-
-        # Scarico eventuali nuovi certificati
-        while next_token is not None:
-            certificates_resp = client.list_certificates(NextToken=next_token)
-            next_token = certificates_resp.get("NextToken", None)
-
-            for ca in certificates_resp["CertificateSummaryList"]:
-                cert_detail = client.describe_certificate(
-                    CertificateArn=ca["CertificateArn"])["Certificate"]
-
-                if cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
-                    ca_tags = client.list_tags_for_certificate(
-                        CertificateArn=ca["CertificateArn"])["Tags"]
-                    for tag in ca_tags:
-                        if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                            certificates_list.append(ca)
-                            break
-
-        print(f"end list acm {datetime.now()}")
-        for acm in certificates_list:
-            CloudWatchACM(acm, self.cloudwatchclient, default_values)
-
-    
-    def list_os(self, client, default_values):
+    def list_os(self, client, default_values, filters, callback):
         print(f"start list_os {datetime.now()}")
         domains_list = []
 
@@ -360,3 +303,59 @@ class ResourceLister:
         print(f"end list_os {datetime.now()}")
         for os in domains_list:
             CloudWatchOS(os, self.cloudwatchclient, default_values)
+
+    
+    # Estrazione lista RDS con tag predefinito
+    def list_rds(self, client, default_values, filters, callback):
+        print(f"start list_rds {datetime.now()}")
+        # Estrazione elenco istanze
+        databasesinstances = []
+        paginator = client.get_paginator("describe_db_instances")
+        pages = paginator.paginate()
+        for page in pages:
+            databasesinstances.extend(page["DBInstances"])
+
+        # Estrazione elenco cluster
+        databasesclusters = []
+        paginator = client.get_paginator("describe_db_clusters")
+        pages = paginator.paginate()
+        for page in pages:
+            databasesclusters.extend(page["DBClusters"])
+
+        database_list = []
+        # Verifica istanze con tag da filtrare tra quelli estratti
+        for database in databasesinstances:
+            for tag in database["TagList"]:
+                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                    database_list.append(database)
+        # Verifica cluster con tag da filtrare tra quelli estratti
+        for database in databasesclusters:
+            for tag in database["TagList"]:
+                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                    database_list.append(database)
+
+        print(f"end list_rds {datetime.now()}")
+        for rds in database_list:
+            CloudWatchRDS(rds, self.cloudwatchclient, default_values)
+
+  
+
+    
+    def list_vpn(self, client, default_values, filters, callback):
+        print(f"start list_vpn {datetime.now()}")
+        vpn_list = []
+
+        vpn_connections = client.describe_vpn_connections()["VpnConnections"]
+        for vpn in vpn_connections:
+            for tag in vpn["Tags"]:
+                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                    vpn_list.append(vpn)
+                    break
+
+        print(f"end list_vpn {datetime.now()}")
+        for vpn in vpn_list:
+            CloudWatchVPN(vpn, self.cloudwatchclient, default_values)
+
+    
+
+    
