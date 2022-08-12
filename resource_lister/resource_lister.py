@@ -6,6 +6,19 @@ class ResourceLister:
         self.filter_tag_key = filter_tag_key
         self.filter_tag_value = filter_tag_value
 
+    @staticmethod
+    def evaluate_filters(item, filters):
+        """
+        Method to filter item based on 
+        :param item: list of items to be checked
+        :param filters: filters to be checked against items
+        :return: filtered list of items
+        """
+        for key in filters:
+            if item[key] != filters[key]:
+                return False
+        return True
+
     def list_acm(self, client, filters, callback, callback_params):
         """
         Method to list certificates filtered by tags
@@ -28,7 +41,7 @@ class ResourceLister:
             cert_detail = client.describe_certificate(
                 CertificateArn=ca["CertificateArn"])["Certificate"]
 
-            if cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
+            if ResourceLister.evaluate_filters(cert_detail, filters): # cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
                 ca_tags = client.list_tags_for_certificate(
                     CertificateArn=ca["CertificateArn"])["Tags"]
                 for tag in ca_tags:
@@ -45,7 +58,7 @@ class ResourceLister:
                 cert_detail = client.describe_certificate(
                     CertificateArn=ca["CertificateArn"])["Certificate"]
 
-                if cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
+                if ResourceLister.evaluate_filters(cert_detail, filters): # cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
                     ca_tags = client.list_tags_for_certificate(
                         CertificateArn=ca["CertificateArn"])["Tags"]
                     for tag in ca_tags:
@@ -147,9 +160,10 @@ class ResourceLister:
 
         # Filter instance by tags
         for filesystem in filesystems:
-            for tag in filesystem["Tags"]:
-                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                    filesystem_list.append(filesystem)
+            if ResourceLister.evaluate_filters(filesystem, filters):
+                for tag in filesystem["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        filesystem_list.append(filesystem)
         print(f"end list_efs {datetime.now()}")
         if callback:
             callback(filesystem_list, *callback_params)
@@ -174,7 +188,7 @@ class ResourceLister:
         cluster_list = []
         for cluster in clusters:
             local_cluster = client.describe_cluster(name=cluster)["cluster"]
-            if local_cluster is not None:
+            if local_cluster is not None and ResourceLister.evaluate_filters(local_cluster, filters):
                 tags = local_cluster["tags"]
                 if tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
                     cluster_list.append(local_cluster)
@@ -216,7 +230,7 @@ class ResourceLister:
 
             if index_lb_tag > -1:
                 for tag in tags[index_lb_tag]["Tags"]:
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value and ResourceLister.evaluate_filters(loadbalancer, filters):
                         # We add to the loadbalancer all its tags. It is needed since in the init of CloudWatchALB we use
                         # also tags to establish the name of the ci
                         loadbalancer["Tags"] = taglist["Tags"]
@@ -263,8 +277,7 @@ class ResourceLister:
                     targetgroups_elbs_arn[elb_arn].append(tg)
 
         # Verify the target groups based on the type of the associated elb
-        client.describe_load_balancers(
-            LoadBalancerArns=list(targetgroups_elbs_arn.keys()))
+        # client.describe_load_balancers(LoadBalancerArns=list(targetgroups_elbs_arn.keys()))
         loadbalancers = []
         next_marker = ""
         while next_marker is not None:
@@ -301,30 +314,31 @@ class ResourceLister:
         alb_tg_list = []
         nlb_tg_list = []
         for tg in targetgroups:
-            index_tg_tag = -1
-            for index, taglist in enumerate(targetgroups_tags):
-                has_tag = False
-                for tag in taglist["Tags"]:
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        has_tag = True
+            if ResourceLister.evaluate_filters(tg, filters):
+                index_tg_tag = -1
+                for index, taglist in enumerate(targetgroups_tags):
+                    has_tag = False
+                    for tag in taglist["Tags"]:
+                        if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                            has_tag = True
 
-                # There is no tag that defines to monitor resources
-                if not has_tag:
-                    break
+                    # There is no tag that defines to monitor resources
+                    if not has_tag:
+                        break
 
-                # Keep track of the location of the tag so it can be deleted from the tags
-                if taglist["ResourceArn"] == tg["TargetGroupArn"]:
-                    index_tg_tag = index
-                    break
+                    # Keep track of the location of the tag so it can be deleted from the tags
+                    if taglist["ResourceArn"] == tg["TargetGroupArn"]:
+                        index_tg_tag = index
+                        break
 
-            if index_tg_tag > -1:
-                tg["Tags"] = targetgroups_tags[index_tg_tag]["Tags"]
+                if index_tg_tag > -1:
+                    tg["Tags"] = targetgroups_tags[index_tg_tag]["Tags"]
 
-                if tg["ELBType"] == "application":
-                    alb_tg_list.append(tg)
-                elif tg["ELBType"] == "network":
-                    nlb_tg_list.append(tg)
-                targetgroups_tags.pop(index_tg_tag)
+                    if tg["ELBType"] == "application":
+                        alb_tg_list.append(tg)
+                    elif tg["ELBType"] == "network":
+                        nlb_tg_list.append(tg)
+                    targetgroups_tags.pop(index_tg_tag)
         if callback:
             callback(alb_tg_list, nlb_tg_list,
                      targetgroups_tags, *callback_params)
@@ -349,15 +363,16 @@ class ResourceLister:
                 DomainName=os["DomainName"])["DomainStatus"]
             if os_details is not None:
                 os_tags = client.list_tags(ARN=os_details["ARN"])["TagList"]
-                for tag in os_tags:
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        domains_list.append(os_details)
-                        break
+                if ResourceLister.evaluate_filters(os_details, filters):
+                    for tag in os_tags:
+                        if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                            domains_list.append(os_details)
+                            break
         print(f"end list_os {datetime.now()}")
         if callback:
             callback(domains_list, *callback_params)
 
-    def list_rds(self, client, filters, callback, callback_params):
+    def list_rds(self, client, instance_filters, cluster_filters, callback, callback_params):
         """
         Method to list db instances filtered by tags
         :param client: RDS boto3 client
@@ -384,14 +399,16 @@ class ResourceLister:
         database_list = []
         # Verify instances with tags to filter among extracted ones
         for database in databasesinstances:
-            for tag in database["TagList"]:
-                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                    database_list.append(database)
+            if ResourceLister.evaluate_filters(database, instance_filters):
+                for tag in database["TagList"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        database_list.append(database)
         # Verify clusters with tags to filter among extracted ones
         for database in databasesclusters:
-            for tag in database["TagList"]:
-                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                    database_list.append(database)
+            if ResourceLister.evaluate_filters(database, cluster_filters):
+                for tag in database["TagList"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        database_list.append(database)
 
         print(f"end list_rds {datetime.now()}")
         if callback:
@@ -411,10 +428,11 @@ class ResourceLister:
 
         vpn_connections = client.describe_vpn_connections()["VpnConnections"]
         for vpn in vpn_connections:
-            for tag in vpn["Tags"]:
-                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                    vpn_list.append(vpn)
-                    break
+            if ResourceLister.evaluate_filters(vpn, filters):
+                for tag in vpn["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        vpn_list.append(vpn)
+                        break
 
         print(f"end list_vpn {datetime.now()}")
         if callback:
