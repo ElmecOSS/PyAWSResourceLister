@@ -26,7 +26,7 @@ class ResourceLister:
         """
         Method to list certificates filtered by tags
         :param client: ACM boto3 client
-        :param filters: Maps list of filters
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_certificate
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of certificates
@@ -34,7 +34,6 @@ class ResourceLister:
 
         print(f"start list acm {datetime.now()}")
         certificates_list = []
-        renewal_eligibility_status = "INELIGIBLE"
 
         # Download first block of certificattes
         # It is not possible use a single while because list_certificates method does not accept NextToken as empty string
@@ -77,7 +76,7 @@ class ResourceLister:
         """
         Method to list ebs filtered by tags
         :param client: EBS boto3 client
-        :param filters: Maps list of filters
+        :param filters: Maps list of filters. Pay attention that this filters are used as param of the boto3's method: describe_volumes
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of ebs
@@ -121,7 +120,7 @@ class ResourceLister:
         """
         Method to list instances filtered by tags
         :param client: EC2 boto3 client
-        :param filters: Maps list of filters
+        :param filters: Maps list of filters. Pay attention that this filters are used as param of the boto3's method: describe_instances
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of ec2
@@ -147,7 +146,7 @@ class ResourceLister:
         """
         Method to list efs filtered by tags
         :param client: EFS boto3 client
-        :param filters: Maps list of filters
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_file_systems
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of efs
@@ -175,7 +174,7 @@ class ResourceLister:
         """
         Method to list clusters filtered by tags
         :param client: EKS boto3 client
-        :param filters: Maps list of filters
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_cluster
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of eks
@@ -203,7 +202,7 @@ class ResourceLister:
         """
         Method to list application and network load balancer filtered by tags. There is already the code for gateway but they are not returned
         :param client: ELB boto3 client
-        :param filters: Maps list of filters
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_load_balancers
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of elb
@@ -255,7 +254,7 @@ class ResourceLister:
         """
         Method to list load balancers target groups filtered by tags
         :param client: ELB boto3 client
-        :param filters: Maps list of filters
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_target_groups
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of elbtg
@@ -351,7 +350,7 @@ class ResourceLister:
         """
         Method to list OpenSearch Domains filtered by tags
         :param client: OpenSearch boto3 client
-        :param filters: Maps list of filters
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_domain
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of OpenSearch Domains
@@ -379,7 +378,8 @@ class ResourceLister:
         """
         Method to list db instances filtered by tags
         :param client: RDS boto3 client
-        :param filters: Maps list of filters
+        :param instance_filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_db_instances
+        :param cluster_filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_db_clusters
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of rds instances
@@ -421,7 +421,7 @@ class ResourceLister:
         """
         Method to list vpn filtered by tags
         :param client: VPN boto3 client
-        :param filters: Maps list of filters
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_vpn_connections
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
         :return: list of vpn
