@@ -18,6 +18,9 @@ class ResourceLister:
             return True
 
         for key in filters:
+            if key not in item:
+                return False
+
             if item[key] != filters[key]:
                 return False
         return True
