@@ -7,6 +7,15 @@ class ResourceLister:
         self.filter_tag_value = filter_tag_value
 
     def list_acm(self, client, filters, callback, callback_params):
+        """
+        Method to list certificates filtered by tags
+        :param client: ACM boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of certificates
+        """
+
         print(f"start list acm {datetime.now()}")
         certificates_list = []
         renewal_eligibility_status = "INELIGIBLE"
@@ -49,6 +58,15 @@ class ResourceLister:
             callback(certificates_list, *callback_params)
 
     def list_ebs(self, client, filters, callback, callback_params):
+        """
+        Method to list ebs filtered by tags
+        :param client: EBS boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of ebs
+        """
+
         print(f"start list_ebs {datetime.now()}")
         tmp_volumes = []
         next_token = ""
@@ -84,6 +102,14 @@ class ResourceLister:
             callback(volumes_list, *callback_params)
 
     def list_ec2(self, client, filters, callback, callback_params):
+        """
+        Method to list instances filtered by tags
+        :param client: EC2 boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of ec2
+        """
         print(f"start list_ec2 {datetime.now()}")
         instances_list = []
 
@@ -102,6 +128,14 @@ class ResourceLister:
             callback(instances_list, *callback_params)
 
     def list_efs(self, client, filters, callback, callback_params):
+        """
+        Method to list efs filtered by tags
+        :param client: EFS boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of efs
+        """
         print(f"start list_efs {datetime.now()}")
         filesystems = []
         paginator = client.get_paginator("describe_file_systems")
@@ -121,6 +155,14 @@ class ResourceLister:
             callback(filesystem_list, *callback_params)
 
     def list_eks(self, client, filters, callback, callback_params):
+        """
+        Method to list clusters filtered by tags
+        :param client: EKS boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of eks
+        """
         print(f"start list_eks {datetime.now()}")
         clusters = []
         next_token = ""
@@ -141,6 +183,14 @@ class ResourceLister:
             callback(cluster_list, *callback_params)
 
     def list_elb(self, client, filters, callback, callback_params):
+        """
+        Method to list application and network load balancer filtered by tags. There is already the code for gateway but they are not returned
+        :param client: ELB boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of elb
+        """
         print(f"start list_elb {datetime.now()}")
         loadbalancers = []
         next_marker = ""
@@ -185,6 +235,14 @@ class ResourceLister:
             callback(alb_list, nlb_list, *callback_params)
 
     def list_elbtg(self, client, filters, callback, callback_params):
+        """
+        Method to list load balancers target groups filtered by tags
+        :param client: ELB boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of elbtg
+        """
         print(f"start list_elbtg {datetime.now()}")
         # I retrieve the tags of the target group so I can extract its name
         # elbarn: [tg_with_that_arn, ...]
@@ -273,6 +331,14 @@ class ResourceLister:
         print(f"end list_elbtg {datetime.now()}")
 
     def list_os(self, client, filters, callback, callback_params):
+        """
+        Method to list OpenSearch Domains filtered by tags
+        :param client: OpenSearch boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of OpenSearch Domains
+        """
         print(f"start list_os {datetime.now()}")
         domains_list = []
 
@@ -292,6 +358,14 @@ class ResourceLister:
             callback(domains_list, *callback_params)
 
     def list_rds(self, client, filters, callback, callback_params):
+        """
+        Method to list db instances filtered by tags
+        :param client: RDS boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of rds instances
+        """
         print(f"start list_rds {datetime.now()}")
         # Instance list extraction
         databasesinstances = []
@@ -324,6 +398,14 @@ class ResourceLister:
             callback(database_list, *callback_params)
 
     def list_vpn(self, client, filters, callback, callback_params):
+        """
+        Method to list vpn filtered by tags
+        :param client: VPN boto3 client
+        :param filters: Maps list of filters
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of vpn
+        """
         print(f"start list_vpn {datetime.now()}")
         vpn_list = []
 
