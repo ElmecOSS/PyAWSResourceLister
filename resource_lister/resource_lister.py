@@ -405,16 +405,12 @@ class ResourceLister:
         database_list = []
         # Verify instances with tags to filter among extracted ones
         for database in databasesinstances:
-            print(f'instance type(database): {type(database)}')
-            print(f'instance database: {database}')
             if ResourceLister.evaluate_filters(database, instance_filters):
                 for tag in database["TagList"]:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         database_list.append(database)
         # Verify clusters with tags to filter among extracted ones
         for database in databasesclusters:
-            print(f'cluster type(database): {type(database)}')
-            print(f'cluster database: {database}')
             if ResourceLister.evaluate_filters(database, cluster_filters):
                 for tag in database["TagList"]:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
