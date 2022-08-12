@@ -14,6 +14,9 @@ class ResourceLister:
         :param filters: filters to be checked against items
         :return: filtered list of items
         """
+        if filters is None:
+            return True
+
         for key in filters:
             if item[key] != filters[key]:
                 return False
