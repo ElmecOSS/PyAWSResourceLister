@@ -110,7 +110,7 @@ class ResourceLister:
             filesystems.extend(page["FileSystems"])
 
         filesystem_list = []
-        
+
         # Filter instance by tags
         for filesystem in filesystems:
             for tag in filesystem["Tags"]:
@@ -184,7 +184,6 @@ class ResourceLister:
         if callback:
             callback(alb_list, nlb_list, *callback_params)
 
-    
     def list_elbtg(self, client, filters, callback, callback_params):
         print(f"start list_elbtg {datetime.now()}")
         # I retrieve the tags of the target group so I can extract its name
@@ -269,7 +268,8 @@ class ResourceLister:
                     nlb_tg_list.append(tg)
                 targetgroups_tags.pop(index_tg_tag)
         if callback:
-            callback(alb_tg_list, nlb_tg_list, targetgroups_tags, *callback_params)
+            callback(alb_tg_list, nlb_tg_list,
+                     targetgroups_tags, *callback_params)
         print(f"end list_elbtg {datetime.now()}")
 
     def list_os(self, client, filters, callback, callback_params):
@@ -291,7 +291,6 @@ class ResourceLister:
         if callback:
             callback(domains_list, *callback_params)
 
-    
     def list_rds(self, client, filters, callback, callback_params):
         print(f"start list_rds {datetime.now()}")
         # Instance list extraction
@@ -324,7 +323,6 @@ class ResourceLister:
         if callback:
             callback(database_list, *callback_params)
 
-   
     def list_vpn(self, client, filters, callback, callback_params):
         print(f"start list_vpn {datetime.now()}")
         vpn_list = []
