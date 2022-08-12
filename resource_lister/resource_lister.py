@@ -56,8 +56,6 @@ class ResourceLister:
         print(f"end list acm {datetime.now()}")
         if callback:
             callback(certificates_list, *callback_params)
-        # for acm in certificates_list:
-        #     CloudWatchACM(acm, self.cloudwatchclient)
 
     def list_ebs(self, client, filters, callback, callback_params):
         print(f"start list_ebs {datetime.now()}")
@@ -66,8 +64,7 @@ class ResourceLister:
         while next_token is not None:
             ebs_resp = client.describe_volumes(
                 NextToken=next_token,
-                Filters=[{"Name": "tag:" + self.filter_tag_key, "Values": [self.filter_tag_value]},
-                         {"Name": "status", "Values": ["in-use"]}])
+                Filters=filters)
             next_token = ebs_resp.get("NextToken", None)
             tmp_volumes.extend(ebs_resp["Volumes"])
 
@@ -135,8 +132,6 @@ class ResourceLister:
                 if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                     filesystem_list.append(filesystem)
         print(f"end list_efs {datetime.now()}")
-        # for efs in filesystem_list:
-        #     CloudWatchEFS(efs, self.cloudwatchclient)
         if callback:
             callback(filesystem_list, *callback_params)
 
@@ -205,10 +200,6 @@ class ResourceLister:
                         break
                 tags.pop(index_lb_tag)
         print(f"end list_elb {datetime.now()}")
-        # for alb in alb_list:
-        #     CloudWatchELB(alb, self.cloudwatchclient_alb)
-        # for nlb in nlb_list:
-        #     CloudWatchELB(nlb, self.cloudwatchclient_nlb)
         if callback:
             callback(alb_list, nlb_list, *callback_params)
 
@@ -316,8 +307,6 @@ class ResourceLister:
                         domains_list.append(os_details)
                         break
         print(f"end list_os {datetime.now()}")
-        # for os in domains_list:
-        #     CloudWatchOS(os, self.cloudwatchclient)
         if callback:
             callback(domains_list, *callback_params)
 
@@ -352,8 +341,6 @@ class ResourceLister:
                     database_list.append(database)
 
         print(f"end list_rds {datetime.now()}")
-        # for rds in database_list:
-        #     CloudWatchRDS(rds, self.cloudwatchclient)
         if callback:
             callback(database_list, *callback_params)
 
@@ -370,11 +357,5 @@ class ResourceLister:
                     break
 
         print(f"end list_vpn {datetime.now()}")
-        # for vpn in vpn_list:
-        #     CloudWatchVPN(vpn, self.cloudwatchclient)
         if callback:
             callback(vpn_list, *callback_params)
-
-    
-
-    
