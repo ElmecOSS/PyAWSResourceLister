@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import boto3
 
 
 class ResourceLister:
@@ -46,7 +47,8 @@ class ResourceLister:
             cert_detail = client.describe_certificate(
                 CertificateArn=ca["CertificateArn"])["Certificate"]
 
-            if ResourceLister.evaluate_filters(cert_detail, filters): # cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
+            # cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
+            if ResourceLister.evaluate_filters(cert_detail, filters):
                 ca_tags = client.list_tags_for_certificate(
                     CertificateArn=ca["CertificateArn"])["Tags"]
                 for tag in ca_tags:
@@ -64,7 +66,8 @@ class ResourceLister:
                 cert_detail = client.describe_certificate(
                     CertificateArn=ca["CertificateArn"])["Certificate"]
 
-                if ResourceLister.evaluate_filters(cert_detail, filters): # cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
+                # cert_detail.get("RenewalEligibility", "") == renewal_eligibility_status:
+                if ResourceLister.evaluate_filters(cert_detail, filters):
                     ca_tags = client.list_tags_for_certificate(
                         CertificateArn=ca["CertificateArn"])["Tags"]
                     for tag in ca_tags:
@@ -201,8 +204,9 @@ class ResourceLister:
                     # Tag Key/Value normalization
                     # {'Tag1': 'Value1', 'Tag2': 'Value2'}
                     # [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
-                    
-                    local_cluster["Tags"] = [{"Key": k, "Value": v} for k, v in tags.items()]
+
+                    local_cluster["Tags"] = [
+                        {"Key": k, "Value": v} for k, v in tags.items()]
                     cluster_list.append(local_cluster)
 
         print(f"end list_eks {datetime.now()}")
@@ -429,6 +433,44 @@ class ResourceLister:
         print(f"end list_rds {datetime.now()}")
         if callback:
             callback(database_list, *callback_params)
+
+    def list_s3(self, client, filters, callback, callback_params):
+        """
+        Method to list S3 filtered by tags
+        :param client: S3 boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_vpn_connections
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of bucket
+        """
+        print(f"start list_s3 {datetime.now()}")
+
+        bucket_list = []
+        optin_regions = ["af-south-1", "ap-east-1",
+                         "ap-southeast-3", "eu-south-1", "me-south-1"]
+
+        buckets = client.list_buckets()["Buckets"]
+        for bucket in buckets:
+            bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
+                'LocationConstraint']
+            if bucket_location in optin_regions:
+               specific_client = boto3.client(
+                   "s3", region_name=bucket_location)
+               bucket_tags = specific_client.get_bucket_tagging(
+                   Bucket=bucket["Name"])["TagSet"]
+            else:
+                bucket_tags = client.get_bucket_tagging(
+                    Bucket=bucket["Name"])["TagSet"]
+            if ResourceLister.evaluate_filters(bucket, filters):
+                for tag in bucket_tags:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        bucket["Tags"] = bucket_tags
+                        bucket_list.append(bucket)
+                        break
+
+        print(f"end list_s3 {datetime.now()}")
+        if callback:
+            callback(bucket_list, *callback_params)
 
     def list_vpn(self, client, filters, callback, callback_params):
         """
