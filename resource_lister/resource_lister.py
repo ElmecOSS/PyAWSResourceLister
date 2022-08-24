@@ -51,6 +51,7 @@ class ResourceLister:
                     CertificateArn=ca["CertificateArn"])["Tags"]
                 for tag in ca_tags:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        ca["Tags"] = ca_tags
                         certificates_list.append(ca)
                         break
 
@@ -68,6 +69,7 @@ class ResourceLister:
                         CertificateArn=ca["CertificateArn"])["Tags"]
                     for tag in ca_tags:
                         if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                            ca["Tags"] = ca_tags
                             certificates_list.append(ca)
                             break
 
@@ -196,7 +198,13 @@ class ResourceLister:
             if local_cluster is not None and ResourceLister.evaluate_filters(local_cluster, filters):
                 tags = local_cluster["tags"]
                 if tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
+                    # Tag Key/Value normalization
+                    # {'Tag1': 'Value1', 'Tag2': 'Value2'}
+                    # [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                    
+                    local_cluster["Tags"] = [{"Key": k, "Value": v} for k, v in tags.items()]
                     cluster_list.append(local_cluster)
+
         print(f"end list_eks {datetime.now()}")
         if callback:
             callback(cluster_list, *callback_params)
@@ -371,8 +379,10 @@ class ResourceLister:
                 if ResourceLister.evaluate_filters(os_details, filters):
                     for tag in os_tags:
                         if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                            os_details["Tags"] = os_tags
                             domains_list.append(os_details)
                             break
+        # TODO: append dei tag in OpenSearch
         print(f"end list_os {datetime.now()}")
         if callback:
             callback(domains_list, *callback_params)
