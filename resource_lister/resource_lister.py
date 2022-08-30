@@ -446,6 +446,7 @@ class ResourceLister:
         print(f"start list_s3 {datetime.now()}")
 
         bucket_list = []
+        # TODO: [CLOUDHAWK-117] filter specific region
         optin_regions = ["af-south-1", "ap-east-1",
                          "ap-southeast-3", "eu-south-1", "me-south-1"]
 
@@ -495,3 +496,45 @@ class ResourceLister:
         print(f"end list_vpn {datetime.now()}")
         if callback:
             callback(vpn_list, *callback_params)
+
+
+
+    def list_lambda(self, client, filters, callback, callback_params):
+        """
+        Method to list lambda functions filtered by tags
+        :param client: Lambda boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_cluster
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of lambda
+        """
+        print(f"start list_lambda {datetime.now()}")
+        functions = []
+        next_token = ""
+        # Download first block of functions
+        # It is not possible use a single while because list_certificates method does not accept NextToken as empty string
+        response = client.list_functions()
+        functions.extend(response["Functions"])
+        next_token = response.get("NextMarker", None)
+        # Download other functions if available
+        while next_token is not None:
+            response = client.list_functions(Marker=next_token)
+            next_token = response.get("NextMarker", None)
+            functions.extend(response["Functions"])
+
+        function_list = []
+        for function in functions:
+            if ResourceLister.evaluate_filters(function, filters):
+                tags = client.list_tags(Resource=function["FunctionArn"])["Tags"]
+                if tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
+                    # Tag Key/Value normalization
+                    # {'Tag1': 'Value1', 'Tag2': 'Value2'}
+                    # [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+
+                    function["Tags"] = [
+                        {"Key": k, "Value": v} for k, v in tags.items()]
+                    function_list.append(function)
+
+        print(f"end list_lambda {datetime.now()}")
+        if callback:
+            callback(function_list, *callback_params)
