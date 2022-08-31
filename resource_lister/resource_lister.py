@@ -386,7 +386,6 @@ class ResourceLister:
                             os_details["Tags"] = os_tags
                             domains_list.append(os_details)
                             break
-        # TODO: append dei tag in OpenSearch
         print(f"end list_os {datetime.now()}")
         if callback:
             callback(domains_list, *callback_params)
@@ -446,28 +445,20 @@ class ResourceLister:
         print(f"start list_s3 {datetime.now()}")
 
         bucket_list = []
-        # TODO: [CLOUDHAWK-117] filter specific region
-        optin_regions = ["af-south-1", "ap-east-1",
-                         "ap-southeast-3", "eu-south-1", "me-south-1"]
-
+        region = client.meta.region_name
         buckets = client.list_buckets()["Buckets"]
         for bucket in buckets:
             bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
                 'LocationConstraint']
-            if bucket_location in optin_regions:
-               specific_client = boto3.client(
-                   "s3", region_name=bucket_location)
-               bucket_tags = specific_client.get_bucket_tagging(
-                   Bucket=bucket["Name"])["TagSet"]
-            else:
+            if bucket_location == region:
                 bucket_tags = client.get_bucket_tagging(
-                    Bucket=bucket["Name"])["TagSet"]
-            if ResourceLister.evaluate_filters(bucket, filters):
-                for tag in bucket_tags:
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        bucket["Tags"] = bucket_tags
-                        bucket_list.append(bucket)
-                        break
+                        Bucket=bucket["Name"])["TagSet"]
+                if ResourceLister.evaluate_filters(bucket, filters):
+                    for tag in bucket_tags:
+                        if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                            bucket["Tags"] = bucket_tags
+                            bucket_list.append(bucket)
+                            break
 
         print(f"end list_s3 {datetime.now()}")
         if callback:
