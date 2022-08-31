@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta, timezone
-import boto3
 
 
 class ResourceLister:
@@ -452,7 +451,7 @@ class ResourceLister:
                 'LocationConstraint']
             if bucket_location == region:
                 bucket_tags = client.get_bucket_tagging(
-                        Bucket=bucket["Name"])["TagSet"]
+                    Bucket=bucket["Name"])["TagSet"]
                 if ResourceLister.evaluate_filters(bucket, filters):
                     for tag in bucket_tags:
                         if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
@@ -488,8 +487,6 @@ class ResourceLister:
         if callback:
             callback(vpn_list, *callback_params)
 
-
-
     def list_lambda(self, client, filters, callback, callback_params):
         """
         Method to list lambda functions filtered by tags
@@ -516,7 +513,8 @@ class ResourceLister:
         function_list = []
         for function in functions:
             if ResourceLister.evaluate_filters(function, filters):
-                tags = client.list_tags(Resource=function["FunctionArn"])["Tags"]
+                tags = client.list_tags(
+                    Resource=function["FunctionArn"])["Tags"]
                 if tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
                     # Tag Key/Value normalization
                     # {'Tag1': 'Value1', 'Tag2': 'Value2'}
@@ -529,3 +527,29 @@ class ResourceLister:
         print(f"end list_lambda {datetime.now()}")
         if callback:
             callback(function_list, *callback_params)
+
+    def list_autoscaling(self, client, filters, callback, callback_params):
+        """
+        Method to list autoscaling functions filtered by tags
+        :param client: autoscaling boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_cluster
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of autoscaling
+        """
+
+        print(f"start list_autoscaling {datetime.now()}")
+        autoscaling_list = []
+
+        autoscaling_groups = client.describe_auto_scaling_groups()[
+            "AutoScalingGroups"]
+        for autoscaling_group in autoscaling_groups:
+            if ResourceLister.evaluate_filters(autoscaling_group, filters):
+                for tag in autoscaling_group["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        autoscaling_list.append(autoscaling_group)
+                        break
+
+        print(f"end list_autoscaling {datetime.now()}")
+        if callback:
+            callback(autoscaling_list, *callback_params)
