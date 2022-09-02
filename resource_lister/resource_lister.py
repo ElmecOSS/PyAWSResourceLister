@@ -293,7 +293,7 @@ class ResourceLister:
             loadbalancer_list.extend(page["LoadBalancers"])
 
     
-        for elb in loadbalancer_list["LoadBalancers"]:
+        for elb in loadbalancer_list:
             if elb["Type"] in ["application", "network"]:
                 # I assign to each tg the type of balancer with which they are associated
                 for tg in targetgroups_elbs_arn[elb["LoadBalancerArn"]]:
@@ -302,7 +302,7 @@ class ResourceLister:
                 # Remove from elbarn map: [pos_tg_with_that_arn, ...] arn of balancers not in the list
                 del targetgroups_elbs_arn[elb["LoadBalancerArn"]]
 
-            loadbalancer_filtered_list.extend(loadbalancer_list["LoadBalancers"])
+            loadbalancer_filtered_list.extend(loadbalancer_list)
 
         # Create unique array with all tgs
         targetgroups = []
