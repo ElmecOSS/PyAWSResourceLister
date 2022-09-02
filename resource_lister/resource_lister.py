@@ -577,3 +577,33 @@ class ResourceLister:
         print(f"end list_storagegateway {datetime.now()}")
         if callback:
             callback(gateway_filtered_list, *callback_params)
+
+    def list_apigateway(self, client, filters, callback, callback_params):
+        """
+        Method to list api gateways filtered by tags
+        :param client: api gateway boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_cluster
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered api gateway
+        """
+
+        print(f"start list_apigateway {datetime.now()}")
+        api_list = []
+        api_filtered_list = []
+        
+        paginator = client.get_paginator("get_apis")
+        pages = paginator.paginate()
+        for page in pages:
+            api_list.extend(page["Items"])
+        
+        for api in api_list:
+            if ResourceLister.evaluate_filters(api, filters):
+                for tag in api["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        api_filtered_list.append(api)
+                        break
+
+        print(f"end list_apigateway {datetime.now()}")
+        if callback:
+            callback(api_filtered_list, *callback_params)
