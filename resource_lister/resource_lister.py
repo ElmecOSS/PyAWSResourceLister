@@ -639,7 +639,7 @@ class ResourceLister:
         next_token = response.get("NextMarker", None)
         # Download other functions if available
         while next_token is not None:
-            response = client.list_web_acls(Scope=scope, Marker=next_token)
+            response = client.list_web_acls(Scope=scope, NextMarker=next_token)
             next_token = response.get("NextMarker", None)
             acls_list.extend(response["WebACLs"])
         
