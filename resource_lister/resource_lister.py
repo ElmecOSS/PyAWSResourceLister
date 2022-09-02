@@ -441,7 +441,7 @@ class ResourceLister:
         buckets = client.list_buckets()["Buckets"]
         for bucket in buckets:
             bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
-                'LocationConstraint']
+                "LocationConstraint"]
             if bucket_location == region:
                 bucket_tags = client.get_bucket_tagging(
                     Bucket=bucket["Name"])["TagSet"]
@@ -569,9 +569,10 @@ class ResourceLister:
         for gateway in gateway_list:
             if ResourceLister.evaluate_filters(gateway, filters):
                 gateway_info = client.describe_gateway_information(GatewayARN=gateway["GatewayARN"])
-                for tag in gateway["Tags"]:
+                for tag in gateway_info["Tags"]:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        gateway_filtered_list.append(gateway_info)
+                        gateway["Tags"] = gateway_info["Tags"]
+                        gateway_filtered_list.append(gateway)
                         break
 
         print(f"end list_storagegateway {datetime.now()}")
@@ -599,11 +600,90 @@ class ResourceLister:
         
         for api in api_list:
             if ResourceLister.evaluate_filters(api, filters):
-                for tag in api["Tags"]:
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        api_filtered_list.append(api)
-                        break
+                if api["Tags"].get(self.filter_tag_key, "no") == self.filter_tag_value:
+                    # Tag Key/Value normalization
+                    # tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
+                    # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                    api["tags"] = api["Tags"]
+                    api["Tags"] = [
+                        {"Key": k, "Value": v} for k, v in api["tags"].items()]
+                    api_filtered_list.append(api)
+                    break
 
         print(f"end list_apigateway {datetime.now()}")
         if callback:
             callback(api_filtered_list, *callback_params)
+
+
+    def list_waf(self, client, filters, callback, callback_params, scope="REGIONAL"):
+        """
+        Method to list waf acl filtered by tags
+        :param client: waf boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_cluster
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :param scope: Specifies whether this is for an Amazon CloudFront distribution or for a regional application. A regional application can be an Application Load Balancer (ALB), an Amazon API Gateway REST API, an AppSync GraphQL API, or an Amazon Cognito user pool.
+        :return: list of filtered waf acl
+        """
+
+        print(f"start list_waf {datetime.now()}")
+        acls_list = []
+        acls_filtered_list = []
+        
+
+        next_token = ""
+        # Download first block
+        # It is not possible use a single while because list_web_acls method does not accept NextToken as empty string
+        response = client.list_web_acls(Scope=scope)
+        acls_list.extend(response["WebACLs"])
+        next_token = response.get("NextMarker", None)
+        # Download other functions if available
+        while next_token is not None:
+            response = client.list_web_acls(Scope=scope, Marker=next_token)
+            next_token = response.get("NextMarker", None)
+            acls_list.extend(response["WebACLs"])
+        
+        for acl in acls_list:
+            acl_tags = client.list_tags_for_resource(ResourceARN=acl["ARN"])["TagInfoForResource"]["TagList"]
+            if ResourceLister.evaluate_filters(acl, filters):
+                for tag in acl_tags:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        acl["Tags"]=acl_tags
+                        acls_filtered_list.append(acl)
+                        break
+
+        print(f"end list_waf {datetime.now()}")
+        if callback:
+            callback(acls_filtered_list, *callback_params)
+
+    def list_cloudfront(self, client, filters, callback, callback_params):
+        """
+        Method to list cloudfront distributions filtered by tags
+        :param client: cloudfront boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_cluster
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered cloudfront distributions
+        """
+
+        print(f"start list_cloudfront {datetime.now()}")
+        distributions_list = []
+        distributions_filtered_list = []
+        
+        paginator = client.get_paginator("list_distributions")
+        pages = paginator.paginate()
+        for page in pages:
+            distributions_list.extend(page["DistributionList"].get("Items", []))
+        
+        for distribution in distributions_list:
+            distribution_tags = client.list_tags_for_resource(Resource=distribution["ARN"])["Tags"]["Items"]
+            if ResourceLister.evaluate_filters(distribution, filters):
+                for tag in distribution_tags:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        distribution["Tags"]=distribution_tags
+                        distributions_filtered_list.append(distribution)
+                        break
+
+        print(f"end list_cloudfront {datetime.now()}")
+        if callback:
+            callback(distributions_filtered_list, *callback_params)
