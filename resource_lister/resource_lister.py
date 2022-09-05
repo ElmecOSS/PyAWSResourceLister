@@ -593,22 +593,43 @@ class ResourceLister:
         api_list = []
         api_filtered_list = []
         
-        paginator = client.get_paginator("get_apis")
-        pages = paginator.paginate()
-        for page in pages:
-            api_list.extend(page["Items"])
-        
-        for api in api_list:
-            if ResourceLister.evaluate_filters(api, filters):
-                if api["Tags"].get(self.filter_tag_key, "no") == self.filter_tag_value:
-                    # Tag Key/Value normalization
-                    # tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
-                    # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
-                    api["tags"] = api["Tags"]
-                    api["Tags"] = [
-                        {"Key": k, "Value": v} for k, v in api["tags"].items()]
-                    api_filtered_list.append(api)
-                    break
+        # apigatewayv2
+        if client._service_model.service_name == "apigatewayv2":
+            paginator = client.get_paginator("get_apis")
+            pages = paginator.paginate()
+            for page in pages:
+                api_list.extend(page["Items"])
+            
+            for api in api_list:
+                if ResourceLister.evaluate_filters(api, filters):
+                    if api["Tags"].get(self.filter_tag_key, "no") == self.filter_tag_value:
+                        # Tag Key/Value normalization
+                        # tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
+                        # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                        api["tags"] = api["Tags"]
+                        api["Tags"] = [
+                            {"Key": k, "Value": v} for k, v in api["tags"].items()]
+                        api_filtered_list.append(api)
+                        break
+
+
+        # apigateway
+        elif client._service_model.service_name == "apigateway":
+            paginator = client.get_paginator("get_rest_apis")
+            pages = paginator.paginate()
+            for page in pages:
+                api_list.extend(page["items"])
+            
+            for api in api_list:
+                if ResourceLister.evaluate_filters(api, filters):
+                    if api["tags"].get(self.filter_tag_key, "no") == self.filter_tag_value:
+                        # Tag Key/Value normalization
+                        # tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
+                        # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                        api["Tags"] = [
+                            {"Key": k, "Value": v} for k, v in api["tags"].items()]
+                        api_filtered_list.append(api)
+                        break
 
         print(f"end list_apigateway {datetime.now()}")
         if callback:
