@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-
+import botocore.exceptions as botoexception
 
 class ResourceLister:
     def __init__(self, filter_tag_key, filter_tag_value):
@@ -442,10 +442,16 @@ class ResourceLister:
         for bucket in buckets:
             bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
                 "LocationConstraint"]
+            bucket_tags={}
             if bucket_location == region:
-                bucket_tags = client.get_bucket_tagging(
-                    Bucket=bucket["Name"])["TagSet"]
-                if ResourceLister.evaluate_filters(bucket, filters):
+                try:
+                    bucket_tags = client.get_bucket_tagging(
+                    Bucket=bucket["Name"])
+                except botoexception.ClientError as error:
+                    if not error.response['Error']['Code'] == "NoSuchTagSet":
+                        raise error
+                bucket_tags=bucket_tags.get("TagSet", None)
+                if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
                     for tag in bucket_tags:
                         if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                             bucket["Tags"] = bucket_tags
@@ -621,7 +627,7 @@ class ResourceLister:
                 api_list.extend(page["items"])
             
             for api in api_list:
-                if ResourceLister.evaluate_filters(api, filters):
+                if ResourceLister.evaluate_filters(api, filters) and "tags" in api:
                     if api["tags"].get(self.filter_tag_key, "no") == self.filter_tag_value:
                         # Tag Key/Value normalization
                         # tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
