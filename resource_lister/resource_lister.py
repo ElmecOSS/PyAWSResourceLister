@@ -1,4 +1,7 @@
+from asyncio.log import logger
+from cmath import exp
 from datetime import datetime, timedelta, timezone
+from logging import Logger
 import botocore.exceptions as botoexception
 
 class ResourceLister:
@@ -440,23 +443,26 @@ class ResourceLister:
         region = client.meta.region_name
         buckets = client.list_buckets()["Buckets"]
         for bucket in buckets:
-            bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
+            try:
+                bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
                 "LocationConstraint"]
-            bucket_tags={}
-            if bucket_location == region:
-                try:
-                    bucket_tags = client.get_bucket_tagging(
-                    Bucket=bucket["Name"])
-                except botoexception.ClientError as error:
-                    if not error.response['Error']['Code'] == "NoSuchTagSet":
-                        raise error
-                bucket_tags=bucket_tags.get("TagSet", None)
-                if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
-                    for tag in bucket_tags:
-                        if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                            bucket["Tags"] = bucket_tags
-                            bucket_list.append(bucket)
-                            break
+                bucket_tags={}
+                if bucket_location == region:
+                    try:
+                        bucket_tags = client.get_bucket_tagging(
+                        Bucket=bucket["Name"])
+                    except botoexception.ClientError as error:
+                        if not error.response['Error']['Code'] == "NoSuchTagSet":
+                            logger.error(error)
+                    bucket_tags=bucket_tags.get("TagSet", None)
+                    if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
+                        for tag in bucket_tags:
+                            if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                                bucket["Tags"] = bucket_tags
+                                bucket_list.append(bucket)
+                                break
+            except botoexception.ClientError as error:
+                logger.error(error)
 
         print(f"end list_s3 {datetime.now()}")
         if callback:
