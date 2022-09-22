@@ -1,3 +1,4 @@
+from asyncio.log import logger
 from cmath import exp
 from datetime import datetime, timedelta, timezone
 from logging import Logger
@@ -452,7 +453,7 @@ class ResourceLister:
                         Bucket=bucket["Name"])
                     except botoexception.ClientError as error:
                         if not error.response['Error']['Code'] == "NoSuchTagSet":
-                            Logger.error(error)
+                            logger.error(error)
                     bucket_tags=bucket_tags.get("TagSet", None)
                     if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
                         for tag in bucket_tags:
@@ -461,7 +462,7 @@ class ResourceLister:
                                 bucket_list.append(bucket)
                                 break
             except botoexception.ClientError as error:
-                Logger.error(error)
+                logger.error(error)
 
         print(f"end list_s3 {datetime.now()}")
         if callback:
@@ -786,3 +787,42 @@ class ResourceLister:
         print(f"end list_appstream {datetime.now()}")
         if callback:
             callback(fleets_filtered_list, *callback_params)
+
+
+    def list_ecs(self, client, filters, callback, callback_params):
+        """
+        Method to list ECS Clusters filtered by tags
+        :param client: ECS boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_domain
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered OpeECSnSearch Clusters
+        """
+        print(f"start list_ecs {datetime.now()}")
+        clusters_list = []
+        clusters_arn_list = []
+        clusters_filtered_list = []
+        
+        paginator = client.get_paginator("list_clusters")
+        pages = paginator.paginate()
+        for page in pages:
+            clusters_arn_list.extend(page["clusterArns"])
+
+        clusters_list = client.describe_clusters(clusters=clusters_arn_list)["clusters"]
+        
+        for cluster in clusters_list:
+            # Tags from "describe_clusters" seems to be broken, retrieved with the specific call
+            cluster_tags = client.list_tags_for_resource(resourceArn=cluster["clusterArn"])["tags"]
+            if ResourceLister.evaluate_filters(cluster, filters):
+                # Tags = [{'key': 'Tag1', 'value': 'Value1'},{'key': 'Tag2', 'value': 'Value2'}]
+                # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                cluster["Tags"] = []
+                for tag in cluster_tags:
+                    cluster["Tags"].append({"Key": tag["key"], "Value": tag["value"]})
+                for tag in cluster["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        clusters_filtered_list.append(cluster)
+                        break
+        print(f"end list_ecs {datetime.now()}")
+        if callback:
+            callback(clusters_filtered_list, *callback_params)
