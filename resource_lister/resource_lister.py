@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from logging import Logger
 import botocore.exceptions as botoexception
 
+
 class ResourceLister:
     def __init__(self, filter_tag_key, filter_tag_value):
         self.filter_tag_key = filter_tag_key
@@ -48,7 +49,7 @@ class ResourceLister:
         for certificate in certificates_list:
             certificate_info = client.describe_certificate(
                 CertificateArn=certificate["CertificateArn"])["Certificate"]
-            
+
             if ResourceLister.evaluate_filters(certificate_info, filters):
                 certificate_tags = client.list_tags_for_certificate(
                     CertificateArn=certificate["CertificateArn"])["Tags"]
@@ -80,7 +81,6 @@ class ResourceLister:
         pages = paginator.paginate(Filters=filters)
         for page in pages:
             volumes_list.extend(page["Volumes"])
-        
 
         for volume in volumes_list:
             # Filters only disks that have been created for at least 30 minutes
@@ -122,8 +122,7 @@ class ResourceLister:
         pages = paginator.paginate(Filters=filters)
         for page in pages:
             instances_list.extend(page["Reservations"])
-        
-    
+
         for reservation in instances_list:
             instances_filtered_list.extend(reservation["Instances"])
 
@@ -141,8 +140,7 @@ class ResourceLister:
         :return: list of filtered efs
         """
         print(f"start list_efs {datetime.now()}")
-        
-        
+
         filesystem_list = []
         filesystem_filtered_list = []
 
@@ -151,14 +149,13 @@ class ResourceLister:
         for page in pages:
             filesystem_list.extend(page["FileSystems"])
 
-
         # Filter instance by tags
         for filesystem in filesystem_list:
             if ResourceLister.evaluate_filters(filesystem, filters):
                 for tag in filesystem["Tags"]:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         filesystem_filtered_list.append(filesystem)
-        
+
         print(f"end list_efs {datetime.now()}")
         if callback:
             callback(filesystem_filtered_list, *callback_params)
@@ -173,10 +170,10 @@ class ResourceLister:
         :return: list of filtered eks
         """
         print(f"start list_eks {datetime.now()}")
-        
+
         cluster_list = []
         cluster_filtered_list = []
-        
+
         paginator = client.get_paginator("list_clusters")
         pages = paginator.paginate()
         for page in pages:
@@ -217,8 +214,7 @@ class ResourceLister:
         paginator = client.get_paginator("describe_load_balancers")
         pages = paginator.paginate()
         for page in pages:
-            loadbalancer_list.extend(page["LoadBalancers"])        
-        
+            loadbalancer_list.extend(page["LoadBalancers"])
 
         # Filter elb by tags
         if len(loadbalancer_list) > 0:
@@ -264,15 +260,14 @@ class ResourceLister:
         print(f"start list_elbtg {datetime.now()}")
         # I retrieve the tags of the target group so I can extract its name
         # elbarn: [tg_with_that_arn, ...]
-        
+
         targetgroup_list = []
         targetgroups_elbs_arn = {}
-        
+
         paginator = client.get_paginator("describe_target_groups")
         pages = paginator.paginate()
         for page in pages:
             targetgroup_list.extend(page["TargetGroups"])
-
 
         for tg in targetgroup_list:
             # Checks whether the target group has an associated balancer
@@ -287,13 +282,12 @@ class ResourceLister:
         # client.describe_load_balancers(LoadBalancerArns=list(targetgroups_elbs_arn.keys()))
         loadbalancer_list = []
         loadbalancer_filtered_list = []
-        
+
         paginator = client.get_paginator("describe_load_balancers")
         pages = paginator.paginate()
         for page in pages:
             loadbalancer_list.extend(page["LoadBalancers"])
 
-    
         for elb in loadbalancer_list:
             if elb["Type"] in ["application", "network"]:
                 # I assign to each tg the type of balancer with which they are associated
@@ -443,16 +437,16 @@ class ResourceLister:
         for bucket in buckets:
             try:
                 bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
-                "LocationConstraint"]
-                bucket_tags={}
+                    "LocationConstraint"]
+                bucket_tags = {}
                 if bucket_location == region:
                     try:
                         bucket_tags = client.get_bucket_tagging(
-                        Bucket=bucket["Name"])
+                            Bucket=bucket["Name"])
                     except botoexception.ClientError as error:
                         if not error.response['Error']['Code'] == "NoSuchTagSet":
                             Logger.error(error)
-                    bucket_tags=bucket_tags.get("TagSet", None)
+                    bucket_tags = bucket_tags.get("TagSet", None)
                     if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
                         for tag in bucket_tags:
                             if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
@@ -502,13 +496,12 @@ class ResourceLister:
         print(f"start list_lambda {datetime.now()}")
         function_list = []
         function_filtered_list = []
-        
+
         paginator = client.get_paginator("list_functions")
         pages = paginator.paginate()
         for page in pages:
             function_list.extend(page["Functions"])
 
-        
         for function in function_list:
             if ResourceLister.evaluate_filters(function, filters):
                 tags = client.list_tags(
@@ -539,13 +532,12 @@ class ResourceLister:
         print(f"start list_autoscaling {datetime.now()}")
         autoscaling_list = []
         autoscaling_filtered_list = []
-        
+
         paginator = client.get_paginator("describe_auto_scaling_groups")
         pages = paginator.paginate()
         for page in pages:
             autoscaling_list.extend(page["AutoScalingGroups"])
 
-       
         for autoscaling_group in autoscaling_list:
             if ResourceLister.evaluate_filters(autoscaling_group, filters):
                 for tag in autoscaling_group["Tags"]:
@@ -570,15 +562,16 @@ class ResourceLister:
         print(f"start list_storagegateway {datetime.now()}")
         gateway_list = []
         gateway_filtered_list = []
-        
+
         paginator = client.get_paginator("list_gateways")
         pages = paginator.paginate()
         for page in pages:
             gateway_list.extend(page["Gateways"])
-        
+
         for gateway in gateway_list:
             if ResourceLister.evaluate_filters(gateway, filters):
-                gateway_info = client.describe_gateway_information(GatewayARN=gateway["GatewayARN"])
+                gateway_info = client.describe_gateway_information(
+                    GatewayARN=gateway["GatewayARN"])
                 for tag in gateway_info["Tags"]:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         gateway["Tags"] = gateway_info["Tags"]
@@ -602,14 +595,14 @@ class ResourceLister:
         print(f"start list_apigateway {datetime.now()}")
         api_list = []
         api_filtered_list = []
-        
+
         # apigatewayv2
         if client._service_model.service_name == "apigatewayv2":
             paginator = client.get_paginator("get_apis")
             pages = paginator.paginate()
             for page in pages:
                 api_list.extend(page["Items"])
-            
+
             for api in api_list:
                 if ResourceLister.evaluate_filters(api, filters):
                     if api["Tags"].get(self.filter_tag_key, "no") == self.filter_tag_value:
@@ -622,14 +615,13 @@ class ResourceLister:
                         api_filtered_list.append(api)
                         break
 
-
         # apigateway
         elif client._service_model.service_name == "apigateway":
             paginator = client.get_paginator("get_rest_apis")
             pages = paginator.paginate()
             for page in pages:
                 api_list.extend(page["items"])
-            
+
             for api in api_list:
                 if ResourceLister.evaluate_filters(api, filters) and "tags" in api:
                     if api["tags"].get(self.filter_tag_key, "no") == self.filter_tag_value:
@@ -645,7 +637,6 @@ class ResourceLister:
         if callback:
             callback(api_filtered_list, *callback_params)
 
-
     def list_waf(self, client, filters, callback, callback_params, scope="REGIONAL"):
         """
         Method to list waf acl filtered by tags
@@ -660,7 +651,6 @@ class ResourceLister:
         print(f"start list_waf {datetime.now()}")
         acls_list = []
         acls_filtered_list = []
-        
 
         next_token = ""
         # Download first block
@@ -673,13 +663,14 @@ class ResourceLister:
             response = client.list_web_acls(Scope=scope, NextMarker=next_token)
             next_token = response.get("NextMarker", None)
             acls_list.extend(response["WebACLs"])
-        
+
         for acl in acls_list:
-            acl_tags = client.list_tags_for_resource(ResourceARN=acl["ARN"])["TagInfoForResource"]["TagList"]
+            acl_tags = client.list_tags_for_resource(ResourceARN=acl["ARN"])[
+                "TagInfoForResource"]["TagList"]
             if ResourceLister.evaluate_filters(acl, filters):
                 for tag in acl_tags:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        acl["Tags"]=acl_tags
+                        acl["Tags"] = acl_tags
                         acls_filtered_list.append(acl)
                         break
 
@@ -700,18 +691,20 @@ class ResourceLister:
         print(f"start list_cloudfront {datetime.now()}")
         distributions_list = []
         distributions_filtered_list = []
-        
+
         paginator = client.get_paginator("list_distributions")
         pages = paginator.paginate()
         for page in pages:
-            distributions_list.extend(page["DistributionList"].get("Items", []))
-        
+            distributions_list.extend(
+                page["DistributionList"].get("Items", []))
+
         for distribution in distributions_list:
-            distribution_tags = client.list_tags_for_resource(Resource=distribution["ARN"])["Tags"]["Items"]
+            distribution_tags = client.list_tags_for_resource(
+                Resource=distribution["ARN"])["Tags"]["Items"]
             if ResourceLister.evaluate_filters(distribution, filters):
                 for tag in distribution_tags:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        distribution["Tags"]=distribution_tags
+                        distribution["Tags"] = distribution_tags
                         distributions_filtered_list.append(distribution)
                         break
 
@@ -732,18 +725,19 @@ class ResourceLister:
         print(f"start list_ecr {datetime.now()}")
         registries_list = []
         registries_filtered_list = []
-        
+
         paginator = client.get_paginator("describe_repositories")
         pages = paginator.paginate()
         for page in pages:
             registries_list.extend(page["repositories"])
-        
+
         for registry in registries_list:
-            registries_tags = client.list_tags_for_resource(resourceArn=registry["repositoryArn"])["tags"]
+            registries_tags = client.list_tags_for_resource(
+                resourceArn=registry["repositoryArn"])["tags"]
             if ResourceLister.evaluate_filters(registry, filters):
                 for tag in registries_tags:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        registry["Tags"]=registries_tags
+                        registry["Tags"] = registries_tags
                         registries_filtered_list.append(registry)
                         break
 
@@ -764,14 +758,15 @@ class ResourceLister:
         print(f"start list_appstream {datetime.now()}")
         fleets_list = []
         fleets_filtered_list = []
-        
+
         paginator = client.get_paginator("describe_fleets")
         pages = paginator.paginate()
         for page in pages:
             fleets_list.extend(page["Fleets"])
-        
+
         for fleet in fleets_list:
-            fleets_tags = client.list_tags_for_resource(ResourceArn=fleet["Arn"])["Tags"]
+            fleets_tags = client.list_tags_for_resource(
+                ResourceArn=fleet["Arn"])["Tags"]
             if ResourceLister.evaluate_filters(fleet, filters):
                 if fleets_tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
                     # Tag Key/Value normalization
@@ -786,7 +781,6 @@ class ResourceLister:
         if callback:
             callback(fleets_filtered_list, *callback_params)
 
-
     def list_ecs(self, client, filters, callback, callback_params):
         """
         Method to list ECS Clusters filtered by tags
@@ -800,23 +794,26 @@ class ResourceLister:
         clusters_list = []
         clusters_arn_list = []
         clusters_filtered_list = []
-        
+
         paginator = client.get_paginator("list_clusters")
         pages = paginator.paginate()
         for page in pages:
             clusters_arn_list.extend(page["clusterArns"])
 
-        clusters_list = client.describe_clusters(clusters=clusters_arn_list)["clusters"]
-        
+        clusters_list = client.describe_clusters(
+            clusters=clusters_arn_list)["clusters"]
+
         for cluster in clusters_list:
             # Tags from "describe_clusters" seems to be broken, retrieved with the specific call
-            cluster_tags = client.list_tags_for_resource(resourceArn=cluster["clusterArn"])["tags"]
+            cluster_tags = client.list_tags_for_resource(
+                resourceArn=cluster["clusterArn"])["tags"]
             if ResourceLister.evaluate_filters(cluster, filters):
                 # Tags = [{'key': 'Tag1', 'value': 'Value1'},{'key': 'Tag2', 'value': 'Value2'}]
                 # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
                 cluster["Tags"] = []
                 for tag in cluster_tags:
-                    cluster["Tags"].append({"Key": tag["key"], "Value": tag["value"]})
+                    cluster["Tags"].append(
+                        {"Key": tag["key"], "Value": tag["value"]})
                 for tag in cluster["Tags"]:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         clusters_filtered_list.append(cluster)
@@ -837,15 +834,15 @@ class ResourceLister:
         print(f"start list_route53 {datetime.now()}")
         domains_list = []
         domains_filtered_list = []
-        
+
         paginator = client.get_paginator("list_hosted_zones")
         pages = paginator.paginate()
         for page in pages:
             domains_list.extend(page["HostedZones"])
 
-        
         for domain in domains_list:
-            domain_tags = client.list_tags_for_resource(ResourceType="hostedzone", ResourceId=domain["Id"].split("/")[2])["ResourceTagSet"]["Tags"]
+            domain_tags = client.list_tags_for_resource(
+                ResourceType="hostedzone", ResourceId=domain["Id"].split("/")[2])["ResourceTagSet"]["Tags"]
             if ResourceLister.evaluate_filters(domain, filters):
                 domain["Tags"] = domain_tags
                 for tag in domain["Tags"]:
@@ -868,15 +865,15 @@ class ResourceLister:
         print(f"start list_sns {datetime.now()}")
         topics_list = []
         topics_filtered_list = []
-        
+
         paginator = client.get_paginator("list_topics")
         pages = paginator.paginate()
         for page in pages:
             topics_list.extend(page["Topics"])
 
-        
         for topic in topics_list:
-            topic_tags = client.list_tags_for_resource(ResourceArn=topic["TopicArn"])["Tags"]
+            topic_tags = client.list_tags_for_resource(
+                ResourceArn=topic["TopicArn"])["Tags"]
             if ResourceLister.evaluate_filters(topic, filters):
                 topic["Tags"] = topic_tags
                 for tag in topic["Tags"]:
@@ -913,9 +910,9 @@ class ResourceLister:
             next_token = response.get("NextToken", None)
             identities_list.extend(response["EmailIdentities"])
 
-        
         for identity in identities_list:
-            identities_info_list = client.get_email_identity(EmailIdentity=identity["IdentityName"])
+            identities_info_list = client.get_email_identity(
+                EmailIdentity=identity["IdentityName"])
             identities_info_list["IdentityName"] = identity["IdentityName"]
             if ResourceLister.evaluate_filters(identity, filters):
                 for tag in identities_info_list["Tags"]:
@@ -925,7 +922,6 @@ class ResourceLister:
         print(f"end list_ses {datetime.now()}")
         if callback:
             callback(identities_filtered_list, *callback_params)
-
 
     def list_sns(self, client, filters, callback, callback_params):
         """
@@ -939,15 +935,15 @@ class ResourceLister:
         print(f"start list_sns {datetime.now()}")
         topics_list = []
         topics_filtered_list = []
-        
+
         paginator = client.get_paginator("list_topics")
         pages = paginator.paginate()
         for page in pages:
             topics_list.extend(page["Topics"])
 
-        
         for topic in topics_list:
-            topic_tags = client.list_tags_for_resource(ResourceArn=topic["TopicArn"])["Tags"]
+            topic_tags = client.list_tags_for_resource(
+                ResourceArn=topic["TopicArn"])["Tags"]
             if ResourceLister.evaluate_filters(topic, filters):
                 topic["Tags"] = topic_tags
                 for tag in topic["Tags"]:
@@ -976,7 +972,7 @@ class ResourceLister:
         pages = paginator.paginate()
         for page in pages:
             queues_url_list.extend(page["QueueUrls"])
-        
+
         for queue_url in queues_url_list:
             queue["QueueUrl"] = queue_url
             queues_tags = client.list_queue_tags(QueueUrl=queue_url)["Tags"]
@@ -1011,13 +1007,13 @@ class ResourceLister:
         pages = paginator.paginate()
         for page in pages:
             directories_list.extend(page["DirectoryDescriptions"])
-        
+
         for directory in directories_list:
             paginator = client.get_paginator("list_tags_for_resource")
             pages = paginator.paginate(ResourceId=directory["DirectoryId"])
             for page in pages:
                 directories_tags.extend(page["Tags"])
-        
+
             if ResourceLister.evaluate_filters(directory, filters):
                 directory["Tags"] = directories_tags
                 for tag in directory["Tags"]:
@@ -1026,4 +1022,4 @@ class ResourceLister:
                         break
         print(f"end list_directory {datetime.now()}")
         if callback:
-            callback(directories_filtered_list, *callback_params)            
+            callback(directories_filtered_list, *callback_params)
