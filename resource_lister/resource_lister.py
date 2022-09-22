@@ -888,3 +888,42 @@ class ResourceLister:
         print(f"end list_sns {datetime.now()}")
         if callback:
             callback(topics_filtered_list, *callback_params)
+
+    def list_ses(self, client, filters, callback, callback_params):
+        """
+        Method to list ses identity filtered by tags
+        :param client: ses boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_identity
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered ses identity
+        """
+        print(f"start list_ses {datetime.now()}")
+        identities_list = []
+        identities_filtered_list = []
+        identities_info_list = []
+
+        next_token = ""
+        # Download first block
+        # It is not possible use a single while because list_email_identities method does not accept NextToken as empty string
+        response = client.list_email_identities()
+        identities_list.extend(response["EmailIdentities"])
+        next_token = response.get("NextToken", None)
+        # Download other functions if available
+        while next_token is not None:
+            response = client.list_email_identities(NextToken=next_token)
+            next_token = response.get("NextToken", None)
+            identities_list.extend(response["EmailIdentities"])
+
+        
+        for identity in identities_list:
+            identities_info_list = client.get_email_identity(EmailIdentity=identity["IdentityName"])
+            identities_info_list["IdentityName"] = identity["IdentityName"]
+            if ResourceLister.evaluate_filters(identity, filters):
+                for tag in identities_info_list["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        identities_filtered_list.append(identities_info_list)
+                        break
+        print(f"end list_ses {datetime.now()}")
+        if callback:
+            callback(identities_filtered_list, *callback_params)

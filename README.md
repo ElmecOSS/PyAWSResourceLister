@@ -22,6 +22,7 @@ Python Library For AWS Resource Listing
 - ECS (Clusters)
 - Route53 (Hosted Zones)
 - SNS (Topic)
+- SES (Identities)
 
 # Key/Value Tags normalization
 ```
