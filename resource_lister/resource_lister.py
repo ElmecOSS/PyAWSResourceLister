@@ -720,3 +720,35 @@ class ResourceLister:
         print(f"end list_cloudfront {datetime.now()}")
         if callback:
             callback(distributions_filtered_list, *callback_params)
+
+    def list_ecr(self, client, filters, callback, callback_params):
+        """
+        Method to list ecr registries filtered by tags
+        :param client: ecr boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_cluster
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered ecr registries
+        """
+
+        print(f"start list_ecr {datetime.now()}")
+        registries_list = []
+        registries_filtered_list = []
+        
+        paginator = client.get_paginator("describe_repositories")
+        pages = paginator.paginate()
+        for page in pages:
+            registries_list.extend(page["repositories"])
+        
+        for registry in registries_list:
+            registries_tags = client.list_tags_for_resource(resourceArn=registry["repositoryArn"])["tags"]
+            if ResourceLister.evaluate_filters(registry, filters):
+                for tag in registries_tags:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        registry["Tags"]=registries_tags
+                        registries_filtered_list.append(registry)
+                        break
+
+        print(f"end list_ecr {datetime.now()}")
+        if callback:
+            callback(registries_filtered_list, *callback_params)

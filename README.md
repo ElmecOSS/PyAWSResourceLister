@@ -16,6 +16,8 @@ Python Library For AWS Resource Listing
 - Storage Gateway
 - API Gateway
 - WAF
+- CloudFront
+- ECR
 
 # Key/Value Tags normalization
 For resources:
