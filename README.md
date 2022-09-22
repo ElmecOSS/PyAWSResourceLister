@@ -21,6 +21,7 @@ Python Library For AWS Resource Listing
 - AppStream (Fleets)
 - ECS (Clusters)
 - Route53 (Hosted Zones)
+- SNS (Topic)
 
 # Key/Value Tags normalization
 ```
