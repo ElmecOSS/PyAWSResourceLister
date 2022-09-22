@@ -1,4 +1,3 @@
-from asyncio.log import logger
 from cmath import exp
 from datetime import datetime, timedelta, timezone
 from logging import Logger
@@ -453,7 +452,7 @@ class ResourceLister:
                         Bucket=bucket["Name"])
                     except botoexception.ClientError as error:
                         if not error.response['Error']['Code'] == "NoSuchTagSet":
-                            logger.error(error)
+                            Logger.error(error)
                     bucket_tags=bucket_tags.get("TagSet", None)
                     if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
                         for tag in bucket_tags:
@@ -462,7 +461,7 @@ class ResourceLister:
                                 bucket_list.append(bucket)
                                 break
             except botoexception.ClientError as error:
-                logger.error(error)
+                Logger.error(error)
 
         print(f"end list_s3 {datetime.now()}")
         if callback:
@@ -927,3 +926,70 @@ class ResourceLister:
         print(f"end list_ses {datetime.now()}")
         if callback:
             callback(identities_filtered_list, *callback_params)
+
+
+    def list_sns(self, client, filters, callback, callback_params):
+        """
+        Method to list SNS Topic filtered by tags
+        :param client: SNS boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_topic
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered SNS Topic
+        """
+        print(f"start list_sns {datetime.now()}")
+        topics_list = []
+        topics_filtered_list = []
+        
+        paginator = client.get_paginator("list_topics")
+        pages = paginator.paginate()
+        for page in pages:
+            topics_list.extend(page["Topics"])
+
+        
+        for topic in topics_list:
+            topic_tags = client.list_tags_for_resource(ResourceArn=topic["TopicArn"])["Tags"]
+            if ResourceLister.evaluate_filters(topic, filters):
+                topic["Tags"] = topic_tags
+                for tag in topic["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        topics_filtered_list.append(topic)
+                        break
+        print(f"end list_sns {datetime.now()}")
+        if callback:
+            callback(topics_filtered_list, *callback_params)
+
+    def list_sqs(self, client, filters, callback, callback_params):
+        """
+        Method to list sqs queue filtered by tags
+        :param client: sqs boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_queue
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered sqs queue
+        """
+        print(f"start list_sqs {datetime.now()}")
+        queues_url_list = []
+        queues_filtered_list = []
+        queues_tags = []
+        queue = {}
+        paginator = client.get_paginator("list_queues")
+        pages = paginator.paginate()
+        for page in pages:
+            queues_url_list.extend(page["QueueUrls"])
+        
+        for queue_url in queues_url_list:
+            queue["QueueUrl"] = queue_url
+            queues_tags = client.list_queue_tags(QueueUrl=queue_url)["Tags"]
+            if ResourceLister.evaluate_filters(queue_url, filters):
+                if queues_tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
+                    # Tag Key/Value normalization
+                    # tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
+                    # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                    queue["Tags"] = [
+                        {"Key": k, "Value": v} for k, v in queues_tags.items()]
+                    queues_filtered_list.append(queue)
+                    break
+        print(f"end list_sqs {datetime.now()}")
+        if callback:
+            callback(queues_filtered_list, *callback_params)
