@@ -18,12 +18,14 @@ Python Library For AWS Resource Listing
 - WAF
 - CloudFront
 - ECR
+- AppStream
 
 # Key/Value Tags normalization
 For resources:
 - EKS
 - Lambda
 - API Gateway
+- AppStream
 ```
 tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
 Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
