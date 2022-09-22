@@ -1,4 +1,3 @@
-from cmath import exp
 from datetime import datetime, timedelta, timezone
 from logging import Logger
 import botocore.exceptions as botoexception
@@ -993,3 +992,38 @@ class ResourceLister:
         print(f"end list_sqs {datetime.now()}")
         if callback:
             callback(queues_filtered_list, *callback_params)
+
+    def list_directory(self, client, filters, callback, callback_params):
+        """
+        Method to list directory filtered by tags
+        :param client: directory boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered directory
+        """
+        print(f"start list_directory {datetime.now()}")
+        directories_list = []
+        directories_filtered_list = []
+        directories_tags = []
+        directory = {}
+        paginator = client.get_paginator("describe_directories")
+        pages = paginator.paginate()
+        for page in pages:
+            directories_list.extend(page["DirectoryDescriptions"])
+        
+        for directory in directories_list:
+            paginator = client.get_paginator("list_tags_for_resource")
+            pages = paginator.paginate(ResourceId=directory["DirectoryId"])
+            for page in pages:
+                directories_tags.extend(page["Tags"])
+        
+            if ResourceLister.evaluate_filters(directory, filters):
+                directory["Tags"] = directories_tags
+                for tag in directory["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        directories_filtered_list.append(directory)
+                        break
+        print(f"end list_directory {datetime.now()}")
+        if callback:
+            callback(directories_filtered_list, *callback_params)            

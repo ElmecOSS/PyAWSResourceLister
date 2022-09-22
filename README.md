@@ -24,6 +24,7 @@ Python Library For AWS Resource Listing
 - SNS (Topic)
 - SES (Identities)
 - SQS (Queues)
+- Directory Service
 
 # Key/Value Tags normalization
 ```
