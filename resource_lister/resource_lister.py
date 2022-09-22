@@ -826,3 +826,34 @@ class ResourceLister:
         print(f"end list_ecs {datetime.now()}")
         if callback:
             callback(clusters_filtered_list, *callback_params)
+
+    def list_route53(self, client, filters, callback, callback_params):
+        """
+        Method to list Route53 Domains filtered by tags
+        :param client: Route53 boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_domain
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered Route53 Domains
+        """
+        print(f"start list_route53 {datetime.now()}")
+        domains_list = []
+        domains_filtered_list = []
+        
+        paginator = client.get_paginator("list_hosted_zones")
+        pages = paginator.paginate()
+        for page in pages:
+            domains_list.extend(page["HostedZones"])
+
+        
+        for domain in domains_list:
+            domain_tags = client.list_tags_for_resource(ResourceType="hostedzone", ResourceId=domain["Id"].split("/")[2])["ResourceTagSet"]["Tags"]
+            if ResourceLister.evaluate_filters(domain, filters):
+                domain["Tags"] = domain_tags
+                for tag in domain["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        domains_filtered_list.append(domain)
+                        break
+        print(f"end list_route53 {datetime.now()}")
+        if callback:
+            callback(domains_filtered_list, *callback_params)

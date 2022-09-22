@@ -15,11 +15,12 @@ Python Library For AWS Resource Listing
 - AutoScaling
 - Storage Gateway
 - API Gateway
-- WAF
-- CloudFront
+- WAF (ACLs)
+- CloudFront (Distributions)
 - ECR
-- AppStream
-- ECS
+- AppStream (Fleets)
+- ECS (Clusters)
+- Route53 (Hosted Zones)
 
 # Key/Value Tags normalization
 ```
