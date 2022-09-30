@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta, timezone
-from logging import Logger
+import logging
+import sys
 import botocore.exceptions as botoexception
 
+logger = logging.getLogger(name="resourcelister")
 
 class ResourceLister:
     def __init__(self, filter_tag_key, filter_tag_value):
@@ -445,7 +447,7 @@ class ResourceLister:
                             Bucket=bucket["Name"])
                     except botoexception.ClientError as error:
                         if not error.response['Error']['Code'] == "NoSuchTagSet":
-                            Logger.error(error)
+                            logger.error(error)
                     bucket_tags = bucket_tags.get("TagSet", None)
                     if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
                         for tag in bucket_tags:
@@ -454,7 +456,7 @@ class ResourceLister:
                                 bucket_list.append(bucket)
                                 break
             except botoexception.ClientError as error:
-                Logger.error(error)
+                logger.error(error)
 
         print(f"end list_s3 {datetime.now()}")
         if callback:
@@ -971,11 +973,11 @@ class ResourceLister:
         paginator = client.get_paginator("list_queues")
         pages = paginator.paginate()
         for page in pages:
-            queues_url_list.extend(page["QueueUrls"])
+            queues_url_list.extend(page.get("QueueUrls",[]))
 
         for queue_url in queues_url_list:
             queue["QueueUrl"] = queue_url
-            queues_tags = client.list_queue_tags(QueueUrl=queue_url)["Tags"]
+            queues_tags = client.list_queue_tags(QueueUrl=queue_url).get("Tags",{})
             if ResourceLister.evaluate_filters(queue_url, filters):
                 if queues_tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
                     # Tag Key/Value normalization
