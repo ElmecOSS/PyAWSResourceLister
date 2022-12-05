@@ -1,5 +1,8 @@
 from datetime import datetime, timedelta, timezone
+import logging
 import botocore.exceptions as botoexception
+
+logger = logging.getLogger(name="resourcelister")
 
 class ResourceLister:
     def __init__(self, filter_tag_key, filter_tag_value):
@@ -47,7 +50,7 @@ class ResourceLister:
         for certificate in certificates_list:
             certificate_info = client.describe_certificate(
                 CertificateArn=certificate["CertificateArn"])["Certificate"]
-            
+
             if ResourceLister.evaluate_filters(certificate_info, filters):
                 certificate_tags = client.list_tags_for_certificate(
                     CertificateArn=certificate["CertificateArn"])["Tags"]
@@ -79,7 +82,6 @@ class ResourceLister:
         pages = paginator.paginate(Filters=filters)
         for page in pages:
             volumes_list.extend(page["Volumes"])
-        
 
         for volume in volumes_list:
             # Filters only disks that have been created for at least 30 minutes
@@ -121,8 +123,7 @@ class ResourceLister:
         pages = paginator.paginate(Filters=filters)
         for page in pages:
             instances_list.extend(page["Reservations"])
-        
-    
+
         for reservation in instances_list:
             instances_filtered_list.extend(reservation["Instances"])
 
@@ -140,8 +141,7 @@ class ResourceLister:
         :return: list of filtered efs
         """
         print(f"start list_efs {datetime.now()}")
-        
-        
+
         filesystem_list = []
         filesystem_filtered_list = []
 
@@ -150,14 +150,13 @@ class ResourceLister:
         for page in pages:
             filesystem_list.extend(page["FileSystems"])
 
-
         # Filter instance by tags
         for filesystem in filesystem_list:
             if ResourceLister.evaluate_filters(filesystem, filters):
                 for tag in filesystem["Tags"]:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         filesystem_filtered_list.append(filesystem)
-        
+
         print(f"end list_efs {datetime.now()}")
         if callback:
             callback(filesystem_filtered_list, *callback_params)
@@ -172,10 +171,10 @@ class ResourceLister:
         :return: list of filtered eks
         """
         print(f"start list_eks {datetime.now()}")
-        
+
         cluster_list = []
         cluster_filtered_list = []
-        
+
         paginator = client.get_paginator("list_clusters")
         pages = paginator.paginate()
         for page in pages:
@@ -216,8 +215,7 @@ class ResourceLister:
         paginator = client.get_paginator("describe_load_balancers")
         pages = paginator.paginate()
         for page in pages:
-            loadbalancer_list.extend(page["LoadBalancers"])        
-        
+            loadbalancer_list.extend(page["LoadBalancers"])
 
         # Filter elb by tags
         if len(loadbalancer_list) > 0:
@@ -263,15 +261,14 @@ class ResourceLister:
         print(f"start list_elbtg {datetime.now()}")
         # I retrieve the tags of the target group so I can extract its name
         # elbarn: [tg_with_that_arn, ...]
-        
+
         targetgroup_list = []
         targetgroups_elbs_arn = {}
-        
+
         paginator = client.get_paginator("describe_target_groups")
         pages = paginator.paginate()
         for page in pages:
             targetgroup_list.extend(page["TargetGroups"])
-
 
         for tg in targetgroup_list:
             # Checks whether the target group has an associated balancer
@@ -286,13 +283,12 @@ class ResourceLister:
         # client.describe_load_balancers(LoadBalancerArns=list(targetgroups_elbs_arn.keys()))
         loadbalancer_list = []
         loadbalancer_filtered_list = []
-        
+
         paginator = client.get_paginator("describe_load_balancers")
         pages = paginator.paginate()
         for page in pages:
             loadbalancer_list.extend(page["LoadBalancers"])
 
-    
         for elb in loadbalancer_list:
             if elb["Type"] in ["application", "network"]:
                 # I assign to each tg the type of balancer with which they are associated
@@ -440,23 +436,26 @@ class ResourceLister:
         region = client.meta.region_name
         buckets = client.list_buckets()["Buckets"]
         for bucket in buckets:
-            bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
-                "LocationConstraint"]
-            bucket_tags={}
-            if bucket_location == region:
-                try:
-                    bucket_tags = client.get_bucket_tagging(
-                    Bucket=bucket["Name"])
-                except botoexception.ClientError as error:
-                    if not error.response['Error']['Code'] == "NoSuchTagSet":
-                        raise error
-                bucket_tags=bucket_tags.get("TagSet", None)
-                if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
-                    for tag in bucket_tags:
-                        if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                            bucket["Tags"] = bucket_tags
-                            bucket_list.append(bucket)
-                            break
+            try:
+                bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
+                    "LocationConstraint"]
+                bucket_tags = {}
+                if bucket_location == region:
+                    try:
+                        bucket_tags = client.get_bucket_tagging(
+                            Bucket=bucket["Name"])
+                    except botoexception.ClientError as error:
+                        if not error.response['Error']['Code'] == "NoSuchTagSet":
+                            logger.error(error)
+                    bucket_tags = bucket_tags.get("TagSet", None)
+                    if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
+                        for tag in bucket_tags:
+                            if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                                bucket["Tags"] = bucket_tags
+                                bucket_list.append(bucket)
+                                break
+            except botoexception.ClientError as error:
+                logger.error(error)
 
         print(f"end list_s3 {datetime.now()}")
         if callback:
@@ -498,13 +497,12 @@ class ResourceLister:
         print(f"start list_lambda {datetime.now()}")
         function_list = []
         function_filtered_list = []
-        
+
         paginator = client.get_paginator("list_functions")
         pages = paginator.paginate()
         for page in pages:
             function_list.extend(page["Functions"])
 
-        
         for function in function_list:
             if ResourceLister.evaluate_filters(function, filters):
                 tags = client.list_tags(
@@ -535,13 +533,12 @@ class ResourceLister:
         print(f"start list_autoscaling {datetime.now()}")
         autoscaling_list = []
         autoscaling_filtered_list = []
-        
+
         paginator = client.get_paginator("describe_auto_scaling_groups")
         pages = paginator.paginate()
         for page in pages:
             autoscaling_list.extend(page["AutoScalingGroups"])
 
-       
         for autoscaling_group in autoscaling_list:
             if ResourceLister.evaluate_filters(autoscaling_group, filters):
                 for tag in autoscaling_group["Tags"]:
@@ -566,15 +563,16 @@ class ResourceLister:
         print(f"start list_storagegateway {datetime.now()}")
         gateway_list = []
         gateway_filtered_list = []
-        
+
         paginator = client.get_paginator("list_gateways")
         pages = paginator.paginate()
         for page in pages:
             gateway_list.extend(page["Gateways"])
-        
+
         for gateway in gateway_list:
             if ResourceLister.evaluate_filters(gateway, filters):
-                gateway_info = client.describe_gateway_information(GatewayARN=gateway["GatewayARN"])
+                gateway_info = client.describe_gateway_information(
+                    GatewayARN=gateway["GatewayARN"])
                 for tag in gateway_info["Tags"]:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         gateway["Tags"] = gateway_info["Tags"]
@@ -598,14 +596,14 @@ class ResourceLister:
         print(f"start list_apigateway {datetime.now()}")
         api_list = []
         api_filtered_list = []
-        
+
         # apigatewayv2
         if client._service_model.service_name == "apigatewayv2":
             paginator = client.get_paginator("get_apis")
             pages = paginator.paginate()
             for page in pages:
                 api_list.extend(page["Items"])
-            
+
             for api in api_list:
                 if ResourceLister.evaluate_filters(api, filters):
                     if api["Tags"].get(self.filter_tag_key, "no") == self.filter_tag_value:
@@ -618,14 +616,13 @@ class ResourceLister:
                         api_filtered_list.append(api)
                         break
 
-
         # apigateway
         elif client._service_model.service_name == "apigateway":
             paginator = client.get_paginator("get_rest_apis")
             pages = paginator.paginate()
             for page in pages:
                 api_list.extend(page["items"])
-            
+
             for api in api_list:
                 if ResourceLister.evaluate_filters(api, filters) and "tags" in api:
                     if api["tags"].get(self.filter_tag_key, "no") == self.filter_tag_value:
@@ -641,7 +638,6 @@ class ResourceLister:
         if callback:
             callback(api_filtered_list, *callback_params)
 
-
     def list_waf(self, client, filters, callback, callback_params, scope="REGIONAL"):
         """
         Method to list waf acl filtered by tags
@@ -656,7 +652,6 @@ class ResourceLister:
         print(f"start list_waf {datetime.now()}")
         acls_list = []
         acls_filtered_list = []
-        
 
         next_token = ""
         # Download first block
@@ -669,13 +664,14 @@ class ResourceLister:
             response = client.list_web_acls(Scope=scope, NextMarker=next_token)
             next_token = response.get("NextMarker", None)
             acls_list.extend(response["WebACLs"])
-        
+
         for acl in acls_list:
-            acl_tags = client.list_tags_for_resource(ResourceARN=acl["ARN"])["TagInfoForResource"]["TagList"]
+            acl_tags = client.list_tags_for_resource(ResourceARN=acl["ARN"])[
+                "TagInfoForResource"]["TagList"]
             if ResourceLister.evaluate_filters(acl, filters):
                 for tag in acl_tags:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        acl["Tags"]=acl_tags
+                        acl["Tags"] = acl_tags
                         acls_filtered_list.append(acl)
                         break
 
@@ -696,21 +692,335 @@ class ResourceLister:
         print(f"start list_cloudfront {datetime.now()}")
         distributions_list = []
         distributions_filtered_list = []
-        
+
         paginator = client.get_paginator("list_distributions")
         pages = paginator.paginate()
         for page in pages:
-            distributions_list.extend(page["DistributionList"].get("Items", []))
-        
+            distributions_list.extend(
+                page["DistributionList"].get("Items", []))
+
         for distribution in distributions_list:
-            distribution_tags = client.list_tags_for_resource(Resource=distribution["ARN"])["Tags"]["Items"]
+            distribution_tags = client.list_tags_for_resource(
+                Resource=distribution["ARN"])["Tags"]["Items"]
             if ResourceLister.evaluate_filters(distribution, filters):
                 for tag in distribution_tags:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        distribution["Tags"]=distribution_tags
+                        distribution["Tags"] = distribution_tags
                         distributions_filtered_list.append(distribution)
                         break
 
         print(f"end list_cloudfront {datetime.now()}")
         if callback:
             callback(distributions_filtered_list, *callback_params)
+
+    def list_ecr(self, client, filters, callback, callback_params):
+        """
+        Method to list ecr registries filtered by tags
+        :param client: ecr boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_cluster
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered ecr registries
+        """
+
+        print(f"start list_ecr {datetime.now()}")
+        registries_list = []
+        registries_filtered_list = []
+
+        paginator = client.get_paginator("describe_repositories")
+        pages = paginator.paginate()
+        for page in pages:
+            registries_list.extend(page["repositories"])
+
+        for registry in registries_list:
+            registries_tags = client.list_tags_for_resource(
+                resourceArn=registry["repositoryArn"])["tags"]
+            if ResourceLister.evaluate_filters(registry, filters):
+                for tag in registries_tags:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        registry["Tags"] = registries_tags
+                        registries_filtered_list.append(registry)
+                        break
+
+        print(f"end list_ecr {datetime.now()}")
+        if callback:
+            callback(registries_filtered_list, *callback_params)
+
+    def list_appstream(self, client, filters, callback, callback_params):
+        """
+        Method to list Appstream fleets filtered by tags
+        :param client: Appstream boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_cluster
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered appstream fleets
+        """
+
+        print(f"start list_appstream {datetime.now()}")
+        fleets_list = []
+        fleets_filtered_list = []
+
+        paginator = client.get_paginator("describe_fleets")
+        pages = paginator.paginate()
+        for page in pages:
+            fleets_list.extend(page["Fleets"])
+
+        for fleet in fleets_list:
+            fleets_tags = client.list_tags_for_resource(
+                ResourceArn=fleet["Arn"])["Tags"]
+            if ResourceLister.evaluate_filters(fleet, filters):
+                if fleets_tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
+                    # Tag Key/Value normalization
+                    # tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
+                    # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                    fleet["Tags"] = [
+                        {"Key": k, "Value": v} for k, v in fleets_tags.items()]
+                    fleets_filtered_list.append(fleet)
+                    break
+
+        print(f"end list_appstream {datetime.now()}")
+        if callback:
+            callback(fleets_filtered_list, *callback_params)
+
+    def list_ecs(self, client, filters, callback, callback_params):
+        """
+        Method to list ECS Clusters filtered by tags
+        :param client: ECS boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_domain
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered OpeECSnSearch Clusters
+        """
+        print(f"start list_ecs {datetime.now()}")
+        clusters_list = []
+        clusters_arn_list = []
+        clusters_filtered_list = []
+
+        paginator = client.get_paginator("list_clusters")
+        pages = paginator.paginate()
+        for page in pages:
+            clusters_arn_list.extend(page["clusterArns"])
+
+        clusters_list = client.describe_clusters(
+            clusters=clusters_arn_list)["clusters"]
+
+        for cluster in clusters_list:
+            # Tags from "describe_clusters" seems to be broken, retrieved with the specific call
+            cluster_tags = client.list_tags_for_resource(
+                resourceArn=cluster["clusterArn"])["tags"]
+            if ResourceLister.evaluate_filters(cluster, filters):
+                # Tags = [{'key': 'Tag1', 'value': 'Value1'},{'key': 'Tag2', 'value': 'Value2'}]
+                # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                cluster["Tags"] = []
+                for tag in cluster_tags:
+                    cluster["Tags"].append(
+                        {"Key": tag["key"], "Value": tag["value"]})
+                for tag in cluster["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        clusters_filtered_list.append(cluster)
+                        break
+        print(f"end list_ecs {datetime.now()}")
+        if callback:
+            callback(clusters_filtered_list, *callback_params)
+
+    def list_route53(self, client, filters, callback, callback_params):
+        """
+        Method to list Route53 Domains filtered by tags
+        :param client: Route53 boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_domain
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered Route53 Domains
+        """
+        print(f"start list_route53 {datetime.now()}")
+        domains_list = []
+        domains_filtered_list = []
+
+        paginator = client.get_paginator("list_hosted_zones")
+        pages = paginator.paginate()
+        for page in pages:
+            domains_list.extend(page["HostedZones"])
+
+        for domain in domains_list:
+            domain_tags = client.list_tags_for_resource(
+                ResourceType="hostedzone", ResourceId=domain["Id"].split("/")[2])["ResourceTagSet"]["Tags"]
+            if ResourceLister.evaluate_filters(domain, filters):
+                domain["Tags"] = domain_tags
+                for tag in domain["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        domains_filtered_list.append(domain)
+                        break
+        print(f"end list_route53 {datetime.now()}")
+        if callback:
+            callback(domains_filtered_list, *callback_params)
+
+    def list_sns(self, client, filters, callback, callback_params):
+        """
+        Method to list SNS Topic filtered by tags
+        :param client: SNS boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_topic
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered SNS Topic
+        """
+        print(f"start list_sns {datetime.now()}")
+        topics_list = []
+        topics_filtered_list = []
+
+        paginator = client.get_paginator("list_topics")
+        pages = paginator.paginate()
+        for page in pages:
+            topics_list.extend(page["Topics"])
+
+        for topic in topics_list:
+            topic_tags = client.list_tags_for_resource(
+                ResourceArn=topic["TopicArn"])["Tags"]
+            if ResourceLister.evaluate_filters(topic, filters):
+                topic["Tags"] = topic_tags
+                for tag in topic["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        topics_filtered_list.append(topic)
+                        break
+        print(f"end list_sns {datetime.now()}")
+        if callback:
+            callback(topics_filtered_list, *callback_params)
+
+    def list_ses(self, client, filters, callback, callback_params):
+        """
+        Method to list ses identity filtered by tags
+        :param client: ses boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_identity
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered ses identity
+        """
+        print(f"start list_ses {datetime.now()}")
+        identities_list = []
+        identities_filtered_list = []
+        identities_info_list = []
+
+        next_token = ""
+        # Download first block
+        # It is not possible use a single while because list_email_identities method does not accept NextToken as empty string
+        response = client.list_email_identities()
+        identities_list.extend(response["EmailIdentities"])
+        next_token = response.get("NextToken", None)
+        # Download other functions if available
+        while next_token is not None:
+            response = client.list_email_identities(NextToken=next_token)
+            next_token = response.get("NextToken", None)
+            identities_list.extend(response["EmailIdentities"])
+
+        for identity in identities_list:
+            identities_info_list = client.get_email_identity(
+                EmailIdentity=identity["IdentityName"])
+            identities_info_list["IdentityName"] = identity["IdentityName"]
+            if ResourceLister.evaluate_filters(identity, filters):
+                for tag in identities_info_list["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        identities_filtered_list.append(identities_info_list)
+                        break
+        print(f"end list_ses {datetime.now()}")
+        if callback:
+            callback(identities_filtered_list, *callback_params)
+
+    def list_sns(self, client, filters, callback, callback_params):
+        """
+        Method to list SNS Topic filtered by tags
+        :param client: SNS boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_topic
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered SNS Topic
+        """
+        print(f"start list_sns {datetime.now()}")
+        topics_list = []
+        topics_filtered_list = []
+
+        paginator = client.get_paginator("list_topics")
+        pages = paginator.paginate()
+        for page in pages:
+            topics_list.extend(page["Topics"])
+
+        for topic in topics_list:
+            topic_tags = client.list_tags_for_resource(
+                ResourceArn=topic["TopicArn"])["Tags"]
+            if ResourceLister.evaluate_filters(topic, filters):
+                topic["Tags"] = topic_tags
+                for tag in topic["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        topics_filtered_list.append(topic)
+                        break
+        print(f"end list_sns {datetime.now()}")
+        if callback:
+            callback(topics_filtered_list, *callback_params)
+
+    def list_sqs(self, client, filters, callback, callback_params):
+        """
+        Method to list sqs queue filtered by tags
+        :param client: sqs boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_queue
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered sqs queue
+        """
+        print(f"start list_sqs {datetime.now()}")
+        queues_url_list = []
+        queues_filtered_list = []
+        queues_tags = []
+        queue = {}
+        paginator = client.get_paginator("list_queues")
+        pages = paginator.paginate()
+        for page in pages:
+            queues_url_list.extend(page.get("QueueUrls",[]))
+
+        for queue_url in queues_url_list:
+            queue["QueueUrl"] = queue_url
+            queues_tags = client.list_queue_tags(QueueUrl=queue_url).get("Tags",{})
+            if ResourceLister.evaluate_filters(queue_url, filters):
+                if queues_tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
+                    # Tag Key/Value normalization
+                    # tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
+                    # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                    queue["Tags"] = [
+                        {"Key": k, "Value": v} for k, v in queues_tags.items()]
+                    queues_filtered_list.append(queue)
+                    break
+        print(f"end list_sqs {datetime.now()}")
+        if callback:
+            callback(queues_filtered_list, *callback_params)
+
+    def list_directory(self, client, filters, callback, callback_params):
+        """
+        Method to list directory filtered by tags
+        :param client: directory boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered directory
+        """
+        print(f"start list_directory {datetime.now()}")
+        directories_list = []
+        directories_filtered_list = []
+        directories_tags = []
+        directory = {}
+        paginator = client.get_paginator("describe_directories")
+        pages = paginator.paginate()
+        for page in pages:
+            directories_list.extend(page["DirectoryDescriptions"])
+
+        for directory in directories_list:
+            paginator = client.get_paginator("list_tags_for_resource")
+            pages = paginator.paginate(ResourceId=directory["DirectoryId"])
+            for page in pages:
+                directories_tags.extend(page["Tags"])
+
+            if ResourceLister.evaluate_filters(directory, filters):
+                directory["Tags"] = directories_tags
+                for tag in directory["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        directories_filtered_list.append(directory)
+                        break
+        print(f"end list_directory {datetime.now()}")
+        if callback:
+            callback(directories_filtered_list, *callback_params)
