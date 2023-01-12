@@ -25,6 +25,7 @@ Python Library For AWS Resource Listing
 - SES (Identities)
 - SQS (Queues)
 - Directory Service
+- VPC (Subnets)
 
 # Key/Value Tags normalization
 ```

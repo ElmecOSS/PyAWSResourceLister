@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 import logging
+import sys
 import botocore.exceptions as botoexception
 
 logger = logging.getLogger(name="resourcelister")
@@ -1024,3 +1025,31 @@ class ResourceLister:
         print(f"end list_directory {datetime.now()}")
         if callback:
             callback(directories_filtered_list, *callback_params)
+
+    def list_subnets(self, client, filters, callback, callback_params):
+        """
+        Method to list subnets filtered by tags
+        :param client: directory boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered subnets
+        """
+        print(f"start list_subnets {datetime.now()}")
+        subnets_list = []
+        subnets_filtered_list = []
+
+        paginator = client.get_paginator("describe_subnets")
+        pages = paginator.paginate()
+        for page in pages:
+            subnets_list.extend(page["Subnets"])
+
+        for subnet in subnets_list:
+            if ResourceLister.evaluate_filters(subnet, filters):
+                for tag in subnet["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        subnets_filtered_list.append(subnet)
+                        break
+        print(f"end list_subnets {datetime.now()}")
+        if callback:
+            callback(subnets_filtered_list, *callback_params)
