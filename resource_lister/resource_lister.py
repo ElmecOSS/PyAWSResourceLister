@@ -1046,7 +1046,7 @@ class ResourceLister:
 
         for subnet in subnets_list:
             if ResourceLister.evaluate_filters(subnet, filters):
-                for tag in subnet["Tags"]:
+                for tag in subnet.get("Tags",[]):
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         subnets_filtered_list.append(subnet)
                         break
