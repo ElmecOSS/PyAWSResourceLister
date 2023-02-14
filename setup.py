@@ -17,7 +17,8 @@ setup(
     install_requires=[
         'requests>=2.24.0',
         'boto3>=1.20.8',
-        'botocore>=1.23.9'
+        'botocore>=1.23.9',
+        'wheel>=0.36.2'
     ],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
