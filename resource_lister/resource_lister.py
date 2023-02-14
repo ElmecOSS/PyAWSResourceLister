@@ -5,6 +5,7 @@ import botocore.exceptions as botoexception
 
 logger = logging.getLogger(name="resourcelister")
 
+
 class ResourceLister:
     def __init__(self, filter_tag_key, filter_tag_value):
         self.filter_tag_key = filter_tag_key
@@ -218,10 +219,15 @@ class ResourceLister:
         for page in pages:
             loadbalancer_list.extend(page["LoadBalancers"])
 
-        # Filter elb by tags
-        if len(loadbalancer_list) > 0:
-            tags = client.describe_tags(
-                ResourceArns=[loadbalancer["LoadBalancerArn"] for loadbalancer in loadbalancer_list])["TagDescriptions"]
+        # Split loadbalancer_list in block of 20 items and extract tags
+        splitedSize = 20
+        tags = []
+        lb_splited = [loadbalancer_list[x:x+splitedSize]
+                      for x in range(0, len(loadbalancer_list), splitedSize)]
+        for lb in lb_splited:
+            tags.extend(client.describe_tags(
+                ResourceArns=[loadbalancer["LoadBalancerArn"] for loadbalancer in lb])["TagDescriptions"])
+
         for loadbalancer in loadbalancer_list:
             # Keep track of the location of the tagset so that you can delete it from the tags
             index_lb_tag = -1
@@ -281,7 +287,6 @@ class ResourceLister:
                 targetgroups_elbs_arn[elb_arn].append(tg)
 
         # Verify the target groups based on the type of the associated elb
-        # client.describe_load_balancers(LoadBalancerArns=list(targetgroups_elbs_arn.keys()))
         loadbalancer_list = []
         loadbalancer_filtered_list = []
 
@@ -312,10 +317,15 @@ class ResourceLister:
             targetgroups_arn.append(tg["TargetGroupArn"])
 
         # Check if tgs have the tag to monitor them
+
+        # Split target groups in block of 20 items and extract tags
+        splitedSize = 20
         targetgroup_filtered_list = []
-        if len(targetgroups_arn) > 0:
-            targetgroup_filtered_list = client.describe_tags(
-                ResourceArns=targetgroups_arn)["TagDescriptions"]
+        tg_arn_splited = [targetgroups_arn[x:x+splitedSize]
+                      for x in range(0, len(targetgroups_arn), splitedSize)]
+        for tg in tg_arn_splited:
+            targetgroup_filtered_list.extend(client.describe_tags(
+                ResourceArns=targetgroups_arn)["TagDescriptions"])
 
         alb_tg_list = []
         nlb_tg_list = []
@@ -973,11 +983,12 @@ class ResourceLister:
         paginator = client.get_paginator("list_queues")
         pages = paginator.paginate()
         for page in pages:
-            queues_url_list.extend(page.get("QueueUrls",[]))
+            queues_url_list.extend(page.get("QueueUrls", []))
 
         for queue_url in queues_url_list:
             queue["QueueUrl"] = queue_url
-            queues_tags = client.list_queue_tags(QueueUrl=queue_url).get("Tags",{})
+            queues_tags = client.list_queue_tags(
+                QueueUrl=queue_url).get("Tags", {})
             if ResourceLister.evaluate_filters(queue_url, filters):
                 if queues_tags.get(self.filter_tag_key, "no") == self.filter_tag_value:
                     # Tag Key/Value normalization
@@ -1046,7 +1057,7 @@ class ResourceLister:
 
         for subnet in subnets_list:
             if ResourceLister.evaluate_filters(subnet, filters):
-                for tag in subnet.get("Tags",[]):
+                for tag in subnet.get("Tags", []):
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         subnets_filtered_list.append(subnet)
                         break
