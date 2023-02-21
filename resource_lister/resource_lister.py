@@ -269,32 +269,34 @@ class ResourceLister:
         # I retrieve the tags of the target group so I can extract its name
         # elbarn: [tg_with_that_arn, ...]
 
-        targetgroup_list = []
-        targetgroups_elbs_arn = {}
+        targetgroup_list = []  # Initial list of all target groups
+        targetgroups_elbs_arn = {}  # Map of all load balancers with associated target groups
 
+        # Target Group listing
         paginator = client.get_paginator("describe_target_groups")
         pages = paginator.paginate()
         for page in pages:
-            targetgroup_list.extend(page["TargetGroups"])
+            targetgroup_list.extend(page["TargetGroups"])                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                #    'IpAddressType': 'ipv4'}, {'TargetGroupArn': 'arn:aws:elasticloadbalancing:eu-west-1:700709210986:targetgroup/Cross-Account-NLB-180/0b54d2a3cc63e2f0', 'TargetGroupName': 'Cross-Account-NLB-180', 'Protocol': 'TCP', 'Port': 8085, 'VpcId': 'vpc-0f1ce16a6c62ebc21', 'HealthCheckProtocol': 'TCP', 'HealthCheckPort': 'traffic-port', 'HealthCheckEnabled': True, 'HealthCheckIntervalSeconds': 30, 'HealthCheckTimeoutSeconds': 10, 'HealthyThresholdCount': 3, 'UnhealthyThresholdCount': 3, 'LoadBalancerArns': ['arn:aws:elasticloadbalancing:eu-west-1:700709210986:loadbalancer/net/Cross-Account-NLB/d9f7ac55c2175094'], 'TargetType': 'ip', 'IpAddressType': 'ipv4'}, {'TargetGroupArn': 'arn:aws:elasticloadbalancing:eu-west-1:700709210986:targetgroup/Cross-Account-NLB-181/f0c6ad2aa0bc2ffd', 'TargetGroupName': 'Cross-Account-NLB-181', 'Protocol': 'TCP', 'Port': 8085, 'VpcId': 'vpc-0f1ce16a6c62ebc21', 'HealthCheckProtocol': 'TCP', 'HealthCheckPort': 'traffic-port', 'HealthCheckEnabled': True, 'HealthCheckIntervalSeconds': 30, 'HealthCheckTimeoutSeconds': 10, 'HealthyThresholdCount': 3, 'UnhealthyThresholdCount': 3, 'LoadBalancerArns': ['arn:aws:elasticloadbalancing:eu-west-1:700709210986:loadbalancer/net/Cross-Account-NLB/d9f7ac55c2175094'], 'TargetType': 'ip', 'IpAddressType': 'ipv4'}, {'TargetGroupArn': 'arn:aws:elasticloadbalancing:eu-west-1:700709210986:targetgroup/jenkins/ac58326bb9c9bfd2', 'TargetGroupName': 'jenkins', 'Protocol': 'HTTP', 'Port': 80, 'VpcId': 'vpc-0f1ce16a6c62ebc21', 'HealthCheckProtocol': 'HTTP', 'HealthCheckPort': 'traffic-port', 'HealthCheckEnabled': True, 'HealthCheckIntervalSeconds': 30, 'HealthCheckTimeoutSeconds': 25, 'HealthyThresholdCount': 2, 'UnhealthyThresholdCount': 5, 'HealthCheckPath': '/', 'Matcher': {'HttpCode': '200-499'}, 'LoadBalancerArns': ['arn:aws:elasticloadbalancing:eu-west-1:700709210986:loadbalancer/app/jenkins/fc1d9bde9190b4ab'], 'TargetType': 'instance', 'ProtocolVersion': 'HTTP1', 'IpAddressType': 'ipv4'}, {'TargetGroupArn': 'arn:aws:elasticloadbalancing:eu-west-1:700709210986:targetgroup/k8s-ecobonus-ecoopena-fe6101eb6c/25816c0d0af2cc45', 'TargetGroupName': 'k8s-ecobonus-ecoopena-fe6101eb6c', 'Protocol': 'TCP', 'Port': 32026, 'VpcId': 'vpc-0f1ce16a6c62ebc21', 'HealthCheckProtocol': 'TCP', 'HealthCheckPort': 'traffic-port', 'HealthCheckEnabled': True, 'HealthCheckIntervalSeconds': 30, 'HealthCheckTimeoutSeconds': 10, 'HealthyThresholdCount': 3, 'UnhealthyThresholdCount': 3, 'LoadBalancerArns': ['arn:aws:elasticloadbalancing:eu-west-1:700709210986:loadbalancer/net/a685d87beef7d4f0b93e70cd60f34508/719d1ada9230f0a3'], 'TargetType': 'instance', 'IpAddressType': 'ipv4'}, {'TargetGroupArn': 'arn:aws:elasticloadbalancing:eu-west-1:700709210986:targetgroup/k8s-ecobonus-ecosecur-8e7854e93a/c65a583500b68eb0', 'TargetGroupName': 'k8s-ecobonus-ecosecur-8e7854e93a', 'Protocol': 'HTTP', 'Port': 30258, 'VpcId': 'vpc-0f1ce16a6c62ebc21', 'HealthCheckProtocol': 'HTTP', 'HealthCheckPort': 'traffic-port', 'HealthCheckEnabled': True, 'HealthCheckIntervalSeconds': 15, 'HealthCheckTimeoutSeconds': 5, 'HealthyThresholdCount': 2, 'UnhealthyThresholdCount': 2, 'HealthCheckPath': '/actuator/health', 'Matcher': {'HttpCode': '200'}, 'LoadBalancerArns': ['arn:aws:elasticloadbalancing:eu-west-1:700709210986:loadbalancer/app/k8s-ecobonus-ecoingre-641d7d9adf/c06528864559c9e2'], 'TargetType': 'instance', 'ProtocolVersion': 'HTTP1', 'IpAddressType': 'ipv4'}, {'TargetGroupArn': 'arn:aws:elasticloadbalancing:eu-west-1:700709210986:targetgroup/k8s-ecobonus-ecosecur-b0263a62d0/3be45bd40094b2f6', 'TargetGroupName': 'k8s-ecobonus-ecosecur-b0263a62d0', 'Protocol': 'HTTP', 'Port': 30258, 'VpcId': 'vpc-0f1ce16a6c62ebc21', 'HealthCheckProtocol': 'HTTP', 'HealthCheckPort': 'traffic-port', 'HealthCheckEnabled': True, 'HealthCheckIntervalSeconds': 15, 'HealthCheckTimeoutSeconds': 5, 'HealthyThresholdCount': 2, 'UnhealthyThresholdCount': 2, 'HealthCheckPath': '/actuator/health', 'Matcher': {'HttpCode': '200'}, 'LoadBalancerArns': ['arn:aws:elasticloadbalancing:eu-west-1:700709210986:loadbalancer/app/k8s-ecobonus-ecoingre-218260c1b2/057c2d4d0156b0d9'], 'TargetType': 'instance', 'ProtocolVersion': 'HTTP1', 'IpAddressType': 'ipv4'}, {'TargetGroupArn': 'arn:aws:elasticloadbalancing:eu-west-1:700709210986:targetgroup/k8s-ecobonus-ecowebfo-306f73e303/06d73d22cce456c9', 'TargetGroupName': 'k8s-ecobonus-ecowebfo-306f73e303', 'Protocol': 'HTTP', 'Port': 30699, 'VpcId': 'vpc-0f1ce16a6c62ebc21', 'HealthCheckProtocol': 'HTTP', 'HealthCheckPort': 'traffic-port', 'HealthCheckEnabled': True, 'HealthCheckIntervalSeconds': 15, 'HealthCheckTimeoutSeconds': 5, 'HealthyThresholdCount': 2, 'UnhealthyThresholdCount': 2, 'HealthCheckPath': '/ping', 'Matcher': {'HttpCode': '200'}, 'LoadBalancerArns': ['arn:aws:elasticloadbalancing:eu-west-1:700709210986:loadbalancer/app/k8s-ecobonus-ecoingre-218260c1b2/057c2d4d0156b0d9'], 'TargetType': 'instance', 'ProtocolVersion': 'HTTP1', 'IpAddressType': 'ipv4'}, {'TargetGroupArn': 'arn:aws:elasticloadbalancing:eu-west-1:700709210986:targetgroup/k8s-ecobonus-ecowebse-8dbd8a1728/91d541da86a7ca8c', 'TargetGroupName': 'k8s-ecobonus-ecowebse-8dbd8a1728', 'Protocol': 'HTTP', 'Port': 31781, 'VpcId': 'vpc-0f1ce16a6c62ebc21', 'HealthCheckProtocol': 'HTTP', 'HealthCheckPort': 'traffic-port', 'HealthCheckEnabled': True, 'HealthCheckIntervalSeconds': 15, 'HealthCheckTimeoutSeconds': 5, 'HealthyThresholdCount': 2, 'UnhealthyThresholdCount': 2, 'HealthCheckPath': '/ping', 'Matcher': {'HttpCode': '200'}, 'LoadBalancerArns': ['arn:aws:elasticloadbalancing:eu-west-1:700709210986:loadbalancer/app/k8s-ecobonus-ecoingre-641d7d9adf/c06528864559c9e2'], 'TargetType': 'instance', 'ProtocolVersion': 'HTTP1', 'IpAddressType': 'ipv4'}]
 
+        # Create list of load balancers from target group list
         for tg in targetgroup_list:
             # Checks whether the target group has an associated balancer
             if len(tg["LoadBalancerArns"]) > 0:
                 elb_arn = tg["LoadBalancerArns"][0]
                 if elb_arn not in targetgroups_elbs_arn:
                     targetgroups_elbs_arn[elb_arn] = []
-
+                #  Append the target group to the list of target groups associated with the elb loadbalancer
                 targetgroups_elbs_arn[elb_arn].append(tg)
 
         # Verify the target groups based on the type of the associated elb
         loadbalancer_list = []
-        loadbalancer_filtered_list = []
-
+        # List all load balancers
         paginator = client.get_paginator("describe_load_balancers")
         pages = paginator.paginate()
         for page in pages:
             loadbalancer_list.extend(page["LoadBalancers"])
 
+        # Check if each tg is associated with a load balancer of type network or application and save the type in the tg object inside targetgroups_elbs_arn
         for elb in loadbalancer_list:
             if elb["Type"] in ["application", "network"]:
                 # I assign to each tg the type of balancer with which they are associated
@@ -304,60 +306,60 @@ class ResourceLister:
                 # Remove from elbarn map: [pos_tg_with_that_arn, ...] arn of balancers not in the list
                 del targetgroups_elbs_arn[elb["LoadBalancerArn"]]
 
-            loadbalancer_filtered_list.extend(loadbalancer_list)
-
-        # Create unique array with all tgs
-        targetgroups = []
+        # Create new unique array with all tgs info + lbtype
+        targetgroups_with_lbtype = []
         for key in targetgroups_elbs_arn:
-            targetgroups.extend(targetgroups_elbs_arn[key])
+            targetgroups_with_lbtype.extend(targetgroups_elbs_arn[key])
 
-        # Download tags of all tgs
+        # Create new list with only the arn of the tgs for tag extraction
         targetgroups_arn = []
-        for tg in targetgroups:
+        for tg in targetgroups_with_lbtype:
             targetgroups_arn.append(tg["TargetGroupArn"])
 
-        # Check if tgs have the tag to monitor them
-
+        targetgroups_arn_tags = []  # Temporary list of TG tags
         # Split target groups in block of 20 items and extract tags
         splitedSize = 20
-        targetgroup_filtered_list = []
-        tg_arn_splited = [targetgroups_arn[x:x+splitedSize]
-                      for x in range(0, len(targetgroups_arn), splitedSize)]
-        for tg in tg_arn_splited:
-            targetgroup_filtered_list.extend(client.describe_tags(
-                ResourceArns=targetgroups_arn)["TagDescriptions"])
+        tg_arn_splitted = [targetgroups_arn[x:x+splitedSize]
+                           for x in range(0, len(targetgroups_arn), splitedSize)]
+        for tg in tg_arn_splitted:
+            targetgroups_arn_tags = client.describe_tags(
+                ResourceArns=tg)["TagDescriptions"]
+            # Check if the tg has the filter tag key and value and then put tags in original list
+            for tg_arn_tags in targetgroups_arn_tags:
+                has_tag = False
+                for tag in tg_arn_tags["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        has_tag = True
+                        # Find same target group in original list and insert the tags in it (if not already present)
+                        for targetgroup_with_lbtype in targetgroups_with_lbtype:
+                            if targetgroup_with_lbtype["TargetGroupArn"] == tg_arn_tags["ResourceArn"]:
+                                targetgroup_with_lbtype["Tags"] = tg_arn_tags["Tags"]
+                                break
+                        break
 
-        alb_tg_list = []
-        nlb_tg_list = []
-        for tg in targetgroups:
+                if not has_tag:
+                    # Find same target group in original list and remove it from the list
+                    targetgroup_toremove_index = -1
+                    for index in range(0, len(targetgroups_with_lbtype)):
+                        if targetgroups_with_lbtype[index]["TargetGroupArn"] == tg_arn_tags["ResourceArn"]:
+                            targetgroup_toremove_index = index
+                            break
+                    # Remove the element
+                    if targetgroup_toremove_index != -1:
+                        del targetgroups_with_lbtype[targetgroup_toremove_index]
+
+        alb_tg_list = []  # Target group of Application Load Balancer
+        nlb_tg_list = []  # Target group of Network Load Balancer
+        # Evaluate filter and then insert tg in appropriate list (Application or Network Load Balancer)
+        for tg in targetgroups_with_lbtype:
             if ResourceLister.evaluate_filters(tg, filters):
-                index_tg_tag = -1
-                for index, taglist in enumerate(targetgroup_filtered_list):
-                    has_tag = False
-                    for tag in taglist["Tags"]:
-                        if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                            has_tag = True
+                if tg["ELBType"] == "application":
+                    alb_tg_list.append(tg)
+                elif tg["ELBType"] == "network":
+                    nlb_tg_list.append(tg)
 
-                    # There is no tag that defines to monitor resources
-                    if not has_tag:
-                        break
-
-                    # Keep track of the location of the tag so it can be deleted from the tags
-                    if taglist["ResourceArn"] == tg["TargetGroupArn"]:
-                        index_tg_tag = index
-                        break
-
-                if index_tg_tag > -1:
-                    tg["Tags"] = targetgroup_filtered_list[index_tg_tag]["Tags"]
-
-                    if tg["ELBType"] == "application":
-                        alb_tg_list.append(tg)
-                    elif tg["ELBType"] == "network":
-                        nlb_tg_list.append(tg)
-                    targetgroup_filtered_list.pop(index_tg_tag)
         if callback:
-            callback(alb_tg_list, nlb_tg_list,
-                     targetgroup_filtered_list, *callback_params)
+            callback(alb_tg_list, nlb_tg_list, *callback_params)
         print(f"end list_elbtg {datetime.now()}")
 
     def list_os(self, client, filters, callback, callback_params):
