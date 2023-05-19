@@ -2,6 +2,17 @@
 
 Python Library For AWS Resource Listing
 
+# Usage
+- Put in requirements.txt: ``git+ssh://git@github.com/ElmecOSS/PyAWSResourceLister.git@main``
+- Run ``pip install -r requirements.txt`` to install required packages
+- Import library in your program
+```
+from ElmecAWSResourceLister.resource_lister import ResourceLister
+
+AWSLister = ResourceLister(filter_tag_key, filter_tag_value)
+```
+
+
 # Supported resources
 - EC2 (Instances)
 - RDS (Instances/Clusters + DocumentDB)

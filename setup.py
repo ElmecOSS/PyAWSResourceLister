@@ -7,8 +7,8 @@ import setuptools
 from setuptools import setup
 
 setup(
-    name='awsresourcelister',
-    version='1.18.5',
+    name='ElmecAwsResourceLister',
+    version='2.0.0',
     packages=setuptools.find_packages(),
     url='',
     author='Cominoli Luca, Dalle Fratte Andrea',

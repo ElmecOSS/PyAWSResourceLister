@@ -1,6 +1,5 @@
 from datetime import datetime, timedelta, timezone
 import logging
-import sys
 import botocore.exceptions as botoexception
 
 logger = logging.getLogger(name="resourcelister")
