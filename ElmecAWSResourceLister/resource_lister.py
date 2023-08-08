@@ -4,6 +4,7 @@ import botocore.exceptions as botoexception
 
 logger = logging.getLogger(name="resourcelister")
 
+
 class ResourceLister:
     def __init__(self, filter_tag_key, filter_tag_value):
         self.filter_tag_key = filter_tag_key
@@ -74,7 +75,8 @@ class ResourceLister:
 
         print(f"end list acm {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(certificates_filtered_list, *callaback_params_sanitized)
 
     def list_ebs(self, client, filters, callback, callback_params):
@@ -117,7 +119,8 @@ class ResourceLister:
 
         print(f"end list_ebs {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(volumes_filtered_list, *callaback_params_sanitized)
 
     def list_ec2(self, client, filters, callback, callback_params):
@@ -143,7 +146,8 @@ class ResourceLister:
 
         print(f"end list_ec2 {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(instances_filtered_list, *callaback_params_sanitized)
 
     def list_efs(self, client, filters, callback, callback_params):
@@ -174,7 +178,8 @@ class ResourceLister:
 
         print(f"end list_efs {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(filesystem_filtered_list, *callaback_params_sanitized)
 
     def list_eks(self, client, filters, callback, callback_params):
@@ -211,7 +216,8 @@ class ResourceLister:
 
         print(f"end list_eks {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(cluster_filtered_list, *callaback_params_sanitized)
 
     def list_elb(self, client, filters, callback, callback_params):
@@ -269,8 +275,10 @@ class ResourceLister:
                 tags.pop(index_lb_tag)
         print(f"end list_elb {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
-            callback(alb_filtered_list, nlb_filtered_list, *callaback_params_sanitized)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(alb_filtered_list, nlb_filtered_list,
+                     *callaback_params_sanitized)
 
     def list_elbtg(self, client, filters, callback, callback_params):
         """
@@ -314,7 +322,7 @@ class ResourceLister:
 
         # Check if each tg is associated with a load balancer of type network or application and save the type in the tg object inside targetgroups_elbs_arn
         for elb in loadbalancer_list:
-            if elb["Type"] in ["application", "network"] and len(targetgroups_elbs_arn.get(elb["LoadBalancerArn"],[])) > 0 :
+            if elb["Type"] in ["application", "network"] and len(targetgroups_elbs_arn.get(elb["LoadBalancerArn"], [])) > 0:
                 # I assign to each tg the type of balancer with which they are associated
                 for tg in targetgroups_elbs_arn[elb["LoadBalancerArn"]]:
                     tg["ELBType"] = elb["Type"]
@@ -375,7 +383,8 @@ class ResourceLister:
                     nlb_tg_list.append(tg)
 
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(alb_tg_list, nlb_tg_list, *callaback_params_sanitized)
         print(f"end list_elbtg {datetime.now()}")
 
@@ -406,7 +415,8 @@ class ResourceLister:
                             break
         print(f"end list_os {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(domains_list, *callaback_params_sanitized)
 
     def list_rds(self, client, instance_filters, cluster_filters, callback, callback_params):
@@ -450,7 +460,8 @@ class ResourceLister:
 
         print(f"end list_rds {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(database_list, *callaback_params_sanitized)
 
     def list_s3(self, client, filters, callback, callback_params):
@@ -491,7 +502,8 @@ class ResourceLister:
 
         print(f"end list_s3 {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(bucket_list, *callaback_params_sanitized)
 
     def list_vpn(self, client, filters, callback, callback_params):
@@ -516,7 +528,8 @@ class ResourceLister:
 
         print(f"end list_vpn {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(vpn_list, *callaback_params_sanitized)
 
     def list_lambda(self, client, filters, callback, callback_params):
@@ -552,7 +565,8 @@ class ResourceLister:
 
         print(f"end list_lambda {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(function_filtered_list, *callaback_params_sanitized)
 
     def list_autoscaling(self, client, filters, callback, callback_params):
@@ -583,7 +597,8 @@ class ResourceLister:
 
         print(f"end list_autoscaling {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(autoscaling_filtered_list, *callaback_params_sanitized)
 
     def list_storagegateway(self, client, filters, callback, callback_params):
@@ -617,7 +632,8 @@ class ResourceLister:
 
         print(f"end list_storagegateway {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(gateway_filtered_list, *callaback_params_sanitized)
 
     def list_apigateway(self, client, filters, callback, callback_params):
@@ -673,7 +689,8 @@ class ResourceLister:
 
         print(f"end list_apigateway {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(api_filtered_list, *callaback_params_sanitized)
 
     def list_waf(self, client, filters, callback, callback_params, scope="REGIONAL"):
@@ -715,7 +732,8 @@ class ResourceLister:
 
         print(f"end list_waf {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(acls_filtered_list, *callaback_params_sanitized)
 
     def list_cloudfront(self, client, filters, callback, callback_params):
@@ -750,7 +768,8 @@ class ResourceLister:
 
         print(f"end list_cloudfront {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(distributions_filtered_list, *callaback_params_sanitized)
 
     def list_ecr(self, client, filters, callback, callback_params):
@@ -784,7 +803,8 @@ class ResourceLister:
 
         print(f"end list_ecr {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(registries_filtered_list, *callaback_params_sanitized)
 
     def list_appstream(self, client, filters, callback, callback_params):
@@ -821,7 +841,8 @@ class ResourceLister:
 
         print(f"end list_appstream {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(fleets_filtered_list, *callaback_params_sanitized)
 
     def list_ecs(self, client, filters, callback, callback_params):
@@ -863,7 +884,8 @@ class ResourceLister:
                         break
         print(f"end list_ecs {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(clusters_filtered_list, *callaback_params_sanitized)
 
     def list_route53(self, client, filters, callback, callback_params):
@@ -895,7 +917,8 @@ class ResourceLister:
                         break
         print(f"end list_route53 {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(domains_filtered_list, *callaback_params_sanitized)
 
     def list_sns(self, client, filters, callback, callback_params):
@@ -927,7 +950,8 @@ class ResourceLister:
                         break
         print(f"end list_sns {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(topics_filtered_list, *callaback_params_sanitized)
 
     def list_ses(self, client, filters, callback, callback_params):
@@ -967,7 +991,8 @@ class ResourceLister:
                         break
         print(f"end list_ses {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(identities_filtered_list, *callaback_params_sanitized)
 
     def list_sns(self, client, filters, callback, callback_params):
@@ -999,7 +1024,8 @@ class ResourceLister:
                         break
         print(f"end list_sns {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(topics_filtered_list, *callaback_params_sanitized)
 
     def list_sqs(self, client, filters, callback, callback_params):
@@ -1033,10 +1059,10 @@ class ResourceLister:
                     queue["Tags"] = [
                         {"Key": k, "Value": v} for k, v in queues_tags.items()]
                     queues_filtered_list.append(queue)
-                    break
         print(f"end list_sqs {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(queues_filtered_list, *callaback_params_sanitized)
 
     def list_directory(self, client, filters, callback, callback_params):
@@ -1072,7 +1098,8 @@ class ResourceLister:
                         break
         print(f"end list_directory {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(directories_filtered_list, *callaback_params_sanitized)
 
     def list_subnets(self, client, filters, callback, callback_params):
@@ -1101,5 +1128,6 @@ class ResourceLister:
                         break
         print(f"end list_subnets {datetime.now()}")
         if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
             callback(subnets_filtered_list, *callaback_params_sanitized)
