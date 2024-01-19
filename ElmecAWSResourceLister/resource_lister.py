@@ -1225,3 +1225,33 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(fsxs_filtered_list, *callaback_params_sanitized)
+
+    def list_kms(self, client, callback, callback_params):
+        """
+        Method to list kms
+        :param client: directory boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of kms
+        """
+        print(f"start list_kms {datetime.now()}")
+        kms_list = []
+
+        paginator = client.get_paginator('list_keys')
+        pages = paginator.paginate()
+        for page in pages:
+            for key in page['Keys']:
+                key_info = {'KeyId': key['KeyId'], 'KeyAliases': []}
+
+                paginator_aliases = client.get_paginator('list_aliases')
+                aliases_page = paginator_aliases.paginate(KeyId=key['KeyId'])
+                for aliases in aliases_page:
+                    key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases'])
+
+                kms_list.append(key_info)
+
+        print(f"end list_kms {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(kms_list, *callaback_params_sanitized)
