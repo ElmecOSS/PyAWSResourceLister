@@ -1195,3 +1195,33 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(globalaccelerator_list, *callaback_params_sanitized)
+
+    def list_fsxs(self, client, filters, callback, callback_params):
+        """
+        Method to list fsxs filtered by tags
+        :param client: directory boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered fsxs
+        """
+        print(f"start list_fsxs {datetime.now()}")
+        fsxs_list = []
+        fsxs_filtered_list = []
+
+        paginator = client.get_paginator("describe_file_systems")
+        pages = paginator.paginate()
+        for page in pages:
+            fsxs_list.extend(page["FileSystems"])
+
+        for fsx in fsxs_list:
+            if ResourceLister.evaluate_filters(fsx, filters):
+                for tag in fsx.get("Tags", []):
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        fsxs_filtered_list.append(fsx)
+                        break
+        print(f"end list_fsxs {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(fsxs_filtered_list, *callaback_params_sanitized)
