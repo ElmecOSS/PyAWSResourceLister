@@ -1195,23 +1195,3 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(globalaccelerator_list, *callaback_params_sanitized)
-
-    def list_directconnect_gtw(self, client, callback, callback_params):
-        """
-        Method to list directconnect gtw
-        :param client: directory boto3 client
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of directconnect gtw
-        """
-        print(f"start list_directconnect_gtw {datetime.now()}")
-        directconnect_list = []
-        paginator = client.get_paginator("describe_direct_connect_gateways")
-        pages = paginator.paginate()
-        for page in pages:
-            directconnect_list.extend(page["directConnectGateways"])
-        print(f"end list_directconnect_gtw {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(directconnect_list, *callaback_params_sanitized)
