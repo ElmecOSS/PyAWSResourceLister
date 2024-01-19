@@ -1275,3 +1275,23 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(mqs_list, *callaback_params_sanitized)
+
+    def list_dynamodb(self, client, callback, callback_params):
+        """
+        Method to list dynamodb
+        :param client: directory boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of dynamodb
+        """
+        print(f"start list_dynamodb {datetime.now()}")
+        dynamodbs_list = []
+        paginator = client.get_paginator("list_brokers")
+        pages = paginator.paginate()
+        for page in pages:
+            dynamodbs_list.extend(page["BrokerSummaries"])
+        print(f"end list_dynamodb {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(dynamodbs_list, *callaback_params_sanitized)
