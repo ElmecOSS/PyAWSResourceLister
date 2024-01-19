@@ -1134,19 +1134,18 @@ class ResourceLister:
 
     def list_codepipeline(self, client, callback, callback_params):
         """
-        Method to list subnets filtered by tags
+        Method to list codepipeline
         :param client: directory boto3 client
-        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
-        :return: list of filtered subnets
+        :return: list of filtered codepipeline
         """
         print(f"start list_codepipeline {datetime.now()}")
         codepipeline_lists = []
-        response = client.list_pipelines()
-        pipelines = response['pipelines']
-        for pipeline in pipelines:
-            codepipeline_lists.append(pipeline)
+        paginator = client.get_paginator("list_pipelines")
+        pages = paginator.paginate()
+        for pipeline in pages:
+            codepipeline_lists.extend(pipeline['name'])
         print(f"end list_codepipeline {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
