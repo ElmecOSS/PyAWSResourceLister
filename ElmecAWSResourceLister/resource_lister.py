@@ -1255,3 +1255,23 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(kms_list, *callaback_params_sanitized)
+
+    def list_mq(self, client, callback, callback_params):
+        """
+        Method to list mq
+        :param client: directory boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of mq
+        """
+        print(f"start list_mq {datetime.now()}")
+        mqs_list = []
+        paginator = client.get_paginator("list_brokers")
+        pages = paginator.paginate()
+        for page in pages:
+            mqs_list.extend(page["BrokerSummaries"])
+        print(f"end list_mq {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(mqs_list, *callaback_params_sanitized)
