@@ -1173,5 +1173,25 @@ class ResourceLister:
                 callback_params)
             callback(codebuilds_list, *callaback_params_sanitized)
 
-        
+    
 
+        
+    def list_globalaccelerator(self, client, callback, callback_params):
+        """
+        Method to list globalaccelerator
+        :param client: directory boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of globalaccelerator
+        """
+        print(f"start list_globalaccelerator {datetime.now()}")
+        globalaccelerator_list = []
+        paginator = client.get_paginator("list_accelerators")
+        pages = paginator.paginate()
+        for page in pages:
+            globalaccelerator_list.extend(page["Accelerators"])
+        print(f"end list_globalaccelerator {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(globalaccelerator_list, *callaback_params_sanitized)
