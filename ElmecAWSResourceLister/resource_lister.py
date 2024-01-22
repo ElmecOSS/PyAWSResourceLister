@@ -1131,27 +1131,7 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(subnets_filtered_list, *callaback_params_sanitized)
-
-    def list_codepipeline(self, client, callback, callback_params):
-        """
-        Method to list subnets filtered by tags
-        :param client: directory boto3 client
-        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of filtered subnets
-        """
-        print(f"start list_codepipeline {datetime.now()}")
-        codepipeline_lists = []
-        response = client.list_pipelines()
-        pipelines = response['pipelines']
-        for pipeline in pipelines:
-            codepipeline_lists.append(pipeline)
-        print(f"end list_codepipeline {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(codepipeline_lists, *callaback_params_sanitized)
+    # Code Build non supporta il tagging
 
     def list_codebuild(self, client, callback, callback_params):
         """
