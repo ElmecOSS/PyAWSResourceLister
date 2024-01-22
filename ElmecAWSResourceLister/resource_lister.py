@@ -1132,7 +1132,7 @@ class ResourceLister:
                 callback_params)
             callback(subnets_filtered_list, *callaback_params_sanitized)
 
-    def list_codepipeline(self, client, callback, callback_params):
+    def list_codepipeline(self, client,filters, callback, callback_params):
         """
         Method to list codepipeline
         :param client: directory boto3 client
@@ -1142,10 +1142,21 @@ class ResourceLister:
         """
         print(f"start list_codepipeline {datetime.now()}")
         codepipeline_lists = []
+        codepipeline_filtered_list = []
+
         paginator = client.get_paginator("list_pipelines")
         pages = paginator.paginate()
-        for pipeline in pages:
-            codepipeline_lists.extend(pipeline['name'])
+        for page in pages:
+                response = client.get_pipeline(name=f"{page['name']}")
+                tags = client.list_tags_for_resource(resourceArn= response['metadata']['pipelineArn'] )
+                codepipeline = {'Pipeline':response['pipeline'], 'Tags':tags['tags']}
+                codepipeline_lists.append(codepipeline)
+        for pipeline in codepipeline_lists:
+            if ResourceLister.evaluate_filters(pipeline, filters):
+                for tag in pipeline.get("Tags", []):
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        codepipeline_filtered_list.append(pipeline)
+                        break
         print(f"end list_codepipeline {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
