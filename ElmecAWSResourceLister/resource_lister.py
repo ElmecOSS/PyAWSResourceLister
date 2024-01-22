@@ -1132,151 +1132,7 @@ class ResourceLister:
                 callback_params)
             callback(subnets_filtered_list, *callaback_params_sanitized)
 
-    def list_codepipeline(self, client, callback, callback_params):
-        """
-        Method to list subnets filtered by tags
-        :param client: directory boto3 client
-        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of filtered subnets
-        """
-        print(f"start list_codepipeline {datetime.now()}")
-        codepipeline_lists = []
-        response = client.list_pipelines()
-        pipelines = response['pipelines']
-        for pipeline in pipelines:
-            codepipeline_lists.append(pipeline)
-        print(f"end list_codepipeline {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(codepipeline_lists, *callaback_params_sanitized)
-
-    def list_codebuild(self, client, callback, callback_params):
-        """
-        Method to list codebuild
-        :param client: directory boto3 client
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of codebuild
-        """
-        print(f"start list_codebuild {datetime.now()}")
-        codebuilds_list = []
-        paginator = client.get_paginator("list_projects")
-        pages = paginator.paginate()
-        for page in pages:
-            codebuilds_list.extend(page["projects"])
-        print(f"end list_codebuild {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(codebuilds_list, *callaback_params_sanitized)
-
-    
-
-        
-    def list_globalaccelerator(self, client, callback, callback_params):
-        """
-        Method to list globalaccelerator
-        :param client: directory boto3 client
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of globalaccelerator
-        """
-        print(f"start list_globalaccelerator {datetime.now()}")
-        globalaccelerator_list = []
-        paginator = client.get_paginator("list_accelerators")
-        pages = paginator.paginate()
-        for page in pages:
-            globalaccelerator_list.extend(page["Accelerators"])
-        print(f"end list_globalaccelerator {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(globalaccelerator_list, *callaback_params_sanitized)
-
-    def list_fsxs(self, client, filters, callback, callback_params):
-        """
-        Method to list fsxs filtered by tags
-        :param client: directory boto3 client
-        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of filtered fsxs
-        """
-        print(f"start list_fsxs {datetime.now()}")
-        fsxs_list = []
-        fsxs_filtered_list = []
-
-        paginator = client.get_paginator("describe_file_systems")
-        pages = paginator.paginate()
-        for page in pages:
-            fsxs_list.extend(page["FileSystems"])
-
-        for fsx in fsxs_list:
-            if ResourceLister.evaluate_filters(fsx, filters):
-                for tag in fsx.get("Tags", []):
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        fsxs_filtered_list.append(fsx)
-                        break
-        print(f"end list_fsxs {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(fsxs_filtered_list, *callaback_params_sanitized)
-
-    def list_kms(self, client, callback, callback_params):
-        """
-        Method to list kms
-        :param client: directory boto3 client
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of kms
-        """
-        print(f"start list_kms {datetime.now()}")
-        kms_list = []
-
-        paginator = client.get_paginator('list_keys')
-        pages = paginator.paginate()
-        for page in pages:
-            for key in page['Keys']:
-                key_info = {'KeyId': key['KeyId'], 'KeyAliases': []}
-
-                paginator_aliases = client.get_paginator('list_aliases')
-                aliases_page = paginator_aliases.paginate(KeyId=key['KeyId'])
-                for aliases in aliases_page:
-                    key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases'])
-
-                kms_list.append(key_info)
-
-        print(f"end list_kms {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(kms_list, *callaback_params_sanitized)
-
-    def list_mq(self, client, callback, callback_params):
-        """
-        Method to list mq
-        :param client: directory boto3 client
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of mq
-        """
-        print(f"start list_mq {datetime.now()}")
-        mqs_list = []
-        paginator = client.get_paginator("list_brokers")
-        pages = paginator.paginate()
-        for page in pages:
-            mqs_list.extend(page["BrokerSummaries"])
-        print(f"end list_mq {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(mqs_list, *callaback_params_sanitized)
-
-    def list_dynamodb(self, client, callback, callback_params):
+    def list_dynamodb(self, filters, client, callback, callback_params):
         """
         Method to list dynamodb
         :param client: directory boto3 client
@@ -1286,10 +1142,21 @@ class ResourceLister:
         """
         print(f"start list_dynamodb {datetime.now()}")
         dynamodbs_list = []
-        paginator = client.get_paginator("list_brokers")
+        dynamodbs_filtered_list = []
+        paginator = client.get_paginator("list_tables")
         pages = paginator.paginate()
         for page in pages:
-            dynamodbs_list.extend(page["BrokerSummaries"])
+            for table in page['TableNames']:
+                response = client.describe_table(TableName = table)
+                tags = client.list_tags_of_resource( ResourceArn = response['Table']['TableArn'])
+                dynamodbs = {'TableNames' : table, 'Tags' : tags}
+                dynamodbs_list.append(dynamodbs)
+        for dynamodb in dynamodbs_list:
+            if ResourceLister.evaluate_filters(dynamodb, filters):
+                for tag in dynamodb.get("Tags", []):
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        dynamodbs_filtered_list.append(dynamodb)
+                        break
         print(f"end list_dynamodb {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
