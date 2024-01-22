@@ -1159,4 +1159,4 @@ class ResourceLister:
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(globalaccelerators_list, *callaback_params_sanitized)
+            callback(globalaccelerators_filtered_list, *callaback_params_sanitized)
