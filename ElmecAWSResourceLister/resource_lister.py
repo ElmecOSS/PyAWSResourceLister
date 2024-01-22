@@ -1132,66 +1132,31 @@ class ResourceLister:
                 callback_params)
             callback(subnets_filtered_list, *callaback_params_sanitized)
 
-    def list_codepipeline(self, client, callback, callback_params):
+    def list_directconnect(self, client, filters, callback, callback_params):
         """
-        Method to list subnets filtered by tags
+        Method to list directconnect filtered by tags
         :param client: directory boto3 client
         :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
         :param callback: Method to be called after the listing
         :param callback_params: Params to be passed to callback method
-        :return: list of filtered subnets
+        :return: list of filtered directconnect
         """
-        print(f"start list_codepipeline {datetime.now()}")
-        codepipeline_lists = []
-        response = client.list_pipelines()
-        pipelines = response['pipelines']
-        for pipeline in pipelines:
-            codepipeline_lists.append(pipeline)
-        print(f"end list_codepipeline {datetime.now()}")
+        print(f"start list_directconnect {datetime.now()}")
+        directconnect_list = []
+        directconnect_filtered_list = []
+
+        connections = client.describe_connections()
+        for connection in connections:
+            directconnect_list.extend(connection["connections"])
+
+        for directconnect in directconnect_list:
+            if ResourceLister.evaluate_filters(directconnect, filters):
+                for tag in directconnect.get("tags", []):
+                    if tag["key"] == self.filter_tag_key and tag["value"] == self.filter_tag_value:
+                        directconnect_filtered_list.append(directconnect)
+                        break
+        print(f"end list_directconnect {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(codepipeline_lists, *callaback_params_sanitized)
-
-    def list_codebuild(self, client, callback, callback_params):
-        """
-        Method to list codebuild
-        :param client: directory boto3 client
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of codebuild
-        """
-        print(f"start list_codebuild {datetime.now()}")
-        codebuilds_list = []
-        paginator = client.get_paginator("list_projects")
-        pages = paginator.paginate()
-        for page in pages:
-            codebuilds_list.extend(page["projects"])
-        print(f"end list_codebuild {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(codebuilds_list, *callaback_params_sanitized)
-
-    
-
-        
-    def list_globalaccelerator(self, client, callback, callback_params):
-        """
-        Method to list globalaccelerator
-        :param client: directory boto3 client
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of globalaccelerator
-        """
-        print(f"start list_globalaccelerator {datetime.now()}")
-        globalaccelerator_list = []
-        paginator = client.get_paginator("list_accelerators")
-        pages = paginator.paginate()
-        for page in pages:
-            globalaccelerator_list.extend(page["Accelerators"])
-        print(f"end list_globalaccelerator {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(globalaccelerator_list, *callaback_params_sanitized)
+            callback(directconnect_filtered_list, *callaback_params_sanitized)
