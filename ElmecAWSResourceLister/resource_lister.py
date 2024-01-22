@@ -1161,6 +1161,6 @@ class ResourceLister:
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(codepipeline_lists, *callaback_params_sanitized)
+            callback(codepipeline_filtered_list, *callaback_params_sanitized)
         
 
