@@ -1169,4 +1169,4 @@ class ResourceLister:
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(kmss_list, *callaback_params_sanitized)
+            callback(kmss_filtered_list, *callaback_params_sanitized)
