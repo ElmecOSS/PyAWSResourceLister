@@ -1184,5 +1184,34 @@ class ResourceLister:
                 callback_params)
             callback(codebuilds_list, *callaback_params_sanitized)
 
+    def list_directconnect(self, client, filters, callback, callback_params):
+        """
+        Method to list directconnect filtered by tags
+        :param client: directory boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered directconnect
+        """
+        print(f"start list_directconnect {datetime.now()}")
+        directconnect_list = []
+        directconnect_filtered_list = []
+
+        connections = client.describe_connections()
+        for connection in connections:
+            directconnect_list.extend(connection["connections"])
+
+        for directconnect in directconnect_list:
+            if ResourceLister.evaluate_filters(directconnect, filters):
+                for tag in directconnect.get("tags", []):
+                    if tag["key"] == self.filter_tag_key and tag["value"] == self.filter_tag_value:
+                        directconnect_filtered_list.append(directconnect)
+                        break
+        print(f"end list_directconnect {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(directconnect_filtered_list, *callaback_params_sanitized)
+
         
 
