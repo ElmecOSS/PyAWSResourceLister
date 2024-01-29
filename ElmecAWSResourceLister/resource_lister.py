@@ -1308,7 +1308,7 @@ class ResourceLister:
                 callback_params)
             callback(globalaccelerators_filtered_list, *callaback_params_sanitized)
 
-    def list_kms(self, filter, client, callback, callback_params):
+    def list_kms(self, filters, client, callback, callback_params):
         """
         Method to list kms
         :param client: directory boto3 client
