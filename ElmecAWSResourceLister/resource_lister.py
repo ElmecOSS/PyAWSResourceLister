@@ -243,7 +243,7 @@ class ResourceLister:
         # Split loadbalancer_list in block of 20 items and extract tags
         splitedSize = 20
         tags = []
-        lb_splited = [loadbalancer_list[x:x+splitedSize]
+        lb_splited = [loadbalancer_list[x:x + splitedSize]
                       for x in range(0, len(loadbalancer_list), splitedSize)]
         for lb in lb_splited:
             tags.extend(client.describe_tags(
@@ -259,7 +259,8 @@ class ResourceLister:
 
             if index_lb_tag > -1:
                 for tag in tags[index_lb_tag]["Tags"]:
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value and ResourceLister.evaluate_filters(loadbalancer, filters):
+                    if tag["Key"] == self.filter_tag_key and tag[
+                        "Value"] == self.filter_tag_value and ResourceLister.evaluate_filters(loadbalancer, filters):
                         # We add to the loadbalancer all its tags. It is needed since in the init of CloudWatchALB we use
                         # also tags to establish the name of the ci
                         loadbalancer["Tags"] = taglist["Tags"]
@@ -322,7 +323,8 @@ class ResourceLister:
 
         # Check if each tg is associated with a load balancer of type network or application and save the type in the tg object inside targetgroups_elbs_arn
         for elb in loadbalancer_list:
-            if elb["Type"] in ["application", "network"] and len(targetgroups_elbs_arn.get(elb["LoadBalancerArn"], [])) > 0:
+            if elb["Type"] in ["application", "network"] and len(
+                    targetgroups_elbs_arn.get(elb["LoadBalancerArn"], [])) > 0:
                 # I assign to each tg the type of balancer with which they are associated
                 for tg in targetgroups_elbs_arn[elb["LoadBalancerArn"]]:
                     tg["ELBType"] = elb["Type"]
@@ -343,7 +345,7 @@ class ResourceLister:
         targetgroups_arn_tags = []  # Temporary list of TG tags
         # Split target groups in block of 20 items and extract tags
         splitedSize = 20
-        tg_arn_splitted = [targetgroups_arn[x:x+splitedSize]
+        tg_arn_splitted = [targetgroups_arn[x:x + splitedSize]
                            for x in range(0, len(targetgroups_arn), splitedSize)]
         for tg in tg_arn_splitted:
             targetgroups_arn_tags = client.describe_tags(
@@ -1131,9 +1133,10 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(subnets_filtered_list, *callaback_params_sanitized)
+
     # Code Build non supporta il tagging
 
-    def list_codepipeline(self, client,filters, callback, callback_params):
+    def list_codepipeline(self, client, filters, callback, callback_params):
         """
         Method to list codepipeline
         :param client: directory boto3 client
@@ -1148,10 +1151,10 @@ class ResourceLister:
         paginator = client.get_paginator("list_pipelines")
         pages = paginator.paginate()
         for page in pages:
-                response = client.get_pipeline(name=f"{page['name']}")
-                tags = client.list_tags_for_resource(resourceArn= response['metadata']['pipelineArn'] )
-                codepipeline = {'Pipeline':response['pipeline'], 'Tags':tags['tags']}
-                codepipeline_lists.append(codepipeline)
+            response = client.get_pipeline(name=f"{page['name']}")
+            tags = client.list_tags_for_resource(resourceArn=response['metadata']['pipelineArn'])
+            codepipeline = {'Pipeline': response['pipeline'], 'Tags': tags['tags']}
+            codepipeline_lists.append(codepipeline)
         for pipeline in codepipeline_lists:
             if ResourceLister.evaluate_filters(pipeline, filters):
                 for tag in pipeline.get("Tags", []):
@@ -1163,7 +1166,7 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(codepipeline_filtered_list, *callaback_params_sanitized)
-            
+
     def list_codebuild(self, client, callback, callback_params):
         """
         Method to list codebuild
@@ -1213,5 +1216,34 @@ class ResourceLister:
                 callback_params)
             callback(directconnect_filtered_list, *callaback_params_sanitized)
 
-        
-
+    def list_dynamodb(self, client, filters, callback, callback_params):
+        """
+        Method to list dynamodb
+        :param client: directory boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_directory
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of dynamodb
+        """
+        print(f"start list_dynamodb {datetime.now()}")
+        dynamodbs_list = []
+        dynamodbs_filtered_list = []
+        paginator = client.get_paginator("list_tables")
+        pages = paginator.paginate()
+        for page in pages:
+            for table in page['TableNames']:
+                response = client.describe_table(TableName=table)
+                tags = client.list_tags_of_resource(ResourceArn=response['Table']['TableArn'])
+                dynamodbs = {'TableNames': table, 'Tags': tags}
+                dynamodbs_list.append(dynamodbs)
+        for dynamodb in dynamodbs_list:
+            if ResourceLister.evaluate_filters(dynamodb, filters):
+                for tag in dynamodb.get("Tags", []):
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        dynamodbs_filtered_list.append(dynamodb)
+                        break
+        print(f"end list_dynamodb {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(dynamodbs_list, *callaback_params_sanitized)
