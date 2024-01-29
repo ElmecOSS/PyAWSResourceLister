@@ -1131,6 +1131,7 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(subnets_filtered_list, *callaback_params_sanitized)
+    # Code Build non supporta il tagging
 
     def list_codepipeline(self, client,filters, callback, callback_params):
         """
@@ -1162,5 +1163,26 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(codepipeline_filtered_list, *callaback_params_sanitized)
+            
+    def list_codebuild(self, client, callback, callback_params):
+        """
+        Method to list codebuild
+        :param client: directory boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of codebuild
+        """
+        print(f"start list_codebuild {datetime.now()}")
+        codebuilds_list = []
+        paginator = client.get_paginator("list_projects")
+        pages = paginator.paginate()
+        for page in pages:
+            codebuilds_list.extend(page["projects"])
+        print(f"end list_codebuild {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(codebuilds_list, *callaback_params_sanitized)
+
         
 
