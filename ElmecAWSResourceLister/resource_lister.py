@@ -1167,7 +1167,7 @@ class ResourceLister:
                 callback_params)
             callback(codepipeline_filtered_list, *callaback_params_sanitized)
 
-    def list_codebuild(self, client, callback, callback_params):
+    def list_codebuild(self, client,filters, callback, callback_params):
         """
         Method to list codebuild
         :param client: directory boto3 client
@@ -1177,10 +1177,22 @@ class ResourceLister:
         """
         print(f"start list_codebuild {datetime.now()}")
         codebuilds_list = []
-        paginator = client.get_paginator("list_projects")
-        pages = paginator.paginate()
-        for page in pages:
-            codebuilds_list.extend(page["projects"])
+        codebuilds_filtered_list = []
+        project_names = client.get_paginator("list_projects")
+        project_names_pages = project_names.paginate()
+        for project_name in project_names_pages:
+                p = [name for name in project_name['projects']]
+                paginator = client.batch_get_projects(names = p)
+                for page in paginator:
+                    if "tags" in page:
+                        page["tags"] = page.pop("Tags")
+                    codebuilds_list.append(page)
+        for codebuild in codebuilds_list:
+            if ResourceLister.evaluate_filters(codebuild, filters):
+                for tag in codebuild.get("Tags", []):
+                    if tag["key"] == self.filter_tag_key and tag["value"] == self.filter_tag_value:
+                        codebuilds_filtered_list.append(codebuild)
+                        break
         print(f"end list_codebuild {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
