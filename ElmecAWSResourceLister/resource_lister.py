@@ -1151,14 +1151,17 @@ class ResourceLister:
         paginator = client.get_paginator("list_pipelines")
         pages = paginator.paginate()
         for page in pages:
-            response = client.get_pipeline(name=f"{page['name']}")
-            tags = client.list_tags_for_resource(resourceArn=response['metadata']['pipelineArn'])
-            codepipeline = {'Pipeline': response['pipeline'], 'Tags': tags['tags']}
-            codepipeline_lists.append(codepipeline)
+            if len(page['pipelines']) > 0:
+                for item in page['pipelines']:
+                    response = client.get_pipeline(name=f"{item['name']}")
+                    tags = client.list_tags_for_resource(resourceArn=response['metadata']['pipelineArn'])
+                    codepipeline = {'Pipeline': response, 'Tags': tags['tags']}
+                    codepipeline_lists.append(codepipeline)
+
         for pipeline in codepipeline_lists:
             if ResourceLister.evaluate_filters(pipeline, filters):
                 for tag in pipeline.get("Tags", []):
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                    if tag["key"] == self.filter_tag_key and tag["value"] == self.filter_tag_value:
                         codepipeline_filtered_list.append(pipeline)
                         break
         print(f"end list_codepipeline {datetime.now()}")
@@ -1183,13 +1186,11 @@ class ResourceLister:
         for project_name in project_names_pages:
                 p = [name for name in project_name['projects']]
                 paginator = client.batch_get_projects(names = p)
-                for page in paginator:
-                    if "tags" in page:
-                        page["tags"] = page.pop("Tags")
+                for page in paginator['projects']:
                     codebuilds_list.append(page)
         for codebuild in codebuilds_list:
             if ResourceLister.evaluate_filters(codebuild, filters):
-                for tag in codebuild.get("Tags", []):
+                for tag in codebuild.get("tags", []):
                     if tag["key"] == self.filter_tag_key and tag["value"] == self.filter_tag_value:
                         codebuilds_filtered_list.append(codebuild)
                         break
@@ -1197,7 +1198,7 @@ class ResourceLister:
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(codebuilds_list, *callaback_params_sanitized)
+            callback(codebuilds_filtered_list, *callaback_params_sanitized)
 
     def list_directconnect(self, client, filters, callback, callback_params):
         """
@@ -1291,7 +1292,7 @@ class ResourceLister:
             callback(fsxs_filtered_list, *callaback_params_sanitized)
 
 
-    def list_globalaccelerator(self, filters, client, callback, callback_params):
+    def list_globalaccelerator(self, client, filters, callback, callback_params):
         """
         Method to list globalaccelerator
         :param client: directory boto3 client
@@ -1302,15 +1303,17 @@ class ResourceLister:
         print(f"start list_globalaccelerator {datetime.now()}")
         globalaccelerators_list = []
         globalaccelerators_filtered_list = []
-        paginator = client.get_paginator("list_accelerators")
+        paginator = client.get_paginator("list_accelerators") 
         pages = paginator.paginate()
         for page in pages:
-            tags = client.list_tags_for_resource( ResourceArn = page["Accelerators"])
-            accelarator = {"Accelerator": page,"Tags": tags['Tags']}
-            globalaccelerators_list.append(accelarator)
+            for  item in page["Accelerators"]:
+            
+                tags = client.list_tags_for_resource( ResourceArn = item['AcceleratorArn'])
+                accelarator = {"Accelerator": item,"Tags": tags['Tags']}
+                globalaccelerators_list.append(accelarator)
         for globalaccelerator in globalaccelerators_list:
             if ResourceLister.evaluate_filters(globalaccelerator, filters):
-                for tag in globalaccelerators_list.get("Tags", []):
+                for tag in globalaccelerator.get("Tags", []):
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         globalaccelerators_filtered_list.append(globalaccelerator)
                         break
