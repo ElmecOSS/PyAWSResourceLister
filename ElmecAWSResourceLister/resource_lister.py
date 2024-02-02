@@ -1214,8 +1214,8 @@ class ResourceLister:
         directconnect_filtered_list = []
 
         connections = client.describe_connections()
-        for connection in connections:
-            directconnect_list.extend(connection["connections"])
+        for connection in connections['connections']:
+            directconnect_list.append(connection)
 
         for directconnect in directconnect_list:
             if ResourceLister.evaluate_filters(directconnect, filters):
