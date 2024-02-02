@@ -1323,7 +1323,7 @@ class ResourceLister:
                 callback_params)
             callback(globalaccelerators_filtered_list, *callaback_params_sanitized)
 
-    def list_kms(self, filters, client, callback, callback_params):
+    def list_kms(self, client, filters, callback, callback_params):
         """
         Method to list kms
         :param client: directory boto3 client
@@ -1334,20 +1334,21 @@ class ResourceLister:
         print(f"start list_kms {datetime.now()}")
         kmss_list = []
         kmss_filtered_list = []
-
         paginator = client.get_paginator('list_keys')
         pages = paginator.paginate()
         for page in pages:
             for key in page['Keys']:
-                key_info = {'KeyId': key['KeyId'], 'KeyAliases': [], 'Tags' : []}
-
+                key_info = {'KeyId': key['KeyId'], 'KeyInfo': [], 'KeyAliases': [], 'Tags' : []}
                 paginator_aliases = client.get_paginator('list_aliases')
                 aliases_page = paginator_aliases.paginate(KeyId=key['KeyId'])
                 tags = client.list_resource_tags(KeyId = key['KeyArn'])
-                key_info['Tags'].extend(tags)
+                key_info['Tags'].extend(tags['Tags'])
                 for aliases in aliases_page:
-                    key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases'])               
-                kmss_list.append(key_info)
+                    key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases']) 
+                k = client.describe_key(KeyId = key['KeyId'])
+                key_info['KeyInfo'].append(k['KeyMetadata'])
+                if "AWS" not in key_info['KeyInfo'][0]['KeyManager']:       
+                    kmss_list.append(key_info)
         
         for kms in kmss_list:
             if ResourceLister.evaluate_filters(kms, filters):
