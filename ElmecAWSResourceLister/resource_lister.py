@@ -1247,7 +1247,7 @@ class ResourceLister:
             for table in page['TableNames']:
                 response = client.describe_table(TableName=table)
                 tags = client.list_tags_of_resource(ResourceArn=response['Table']['TableArn'])
-                dynamodbs = {'TableNames': table, 'Tags': tags}
+                dynamodbs = {'TableInfo': response['Table'], 'Tags': tags['Tags']}
                 dynamodbs_list.append(dynamodbs)
         for dynamodb in dynamodbs_list:
             if ResourceLister.evaluate_filters(dynamodb, filters):
