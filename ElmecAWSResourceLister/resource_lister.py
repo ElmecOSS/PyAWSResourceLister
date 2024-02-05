@@ -1338,16 +1338,14 @@ class ResourceLister:
         pages = paginator.paginate()
         for page in pages:
             for key in page['Keys']:
-                key_info = {'KeyId': key['KeyId'], 'KeyInfo': [], 'KeyAliases': [], 'Tags' : []}
+                key_info = {'KeyId': key['KeyId'], 'KeyAliases': [], 'Tags' : []}
                 paginator_aliases = client.get_paginator('list_aliases')
                 aliases_page = paginator_aliases.paginate(KeyId=key['KeyId'])
                 tags = client.list_resource_tags(KeyId = key['KeyArn'])
                 key_info['Tags'].extend(tags['Tags'])
                 for aliases in aliases_page:
-                    key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases']) 
-                k = client.describe_key(KeyId = key['KeyId'])
-                key_info['KeyInfo'].append(k['KeyMetadata'])
-                if "AWS" not in key_info['KeyInfo'][0]['KeyManager']:       
+                    key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases'])  
+                if "alias/aws/" not in key_info['KeyAliases'][0]:          
                     kmss_list.append(key_info)
         
         for kms in kmss_list:
@@ -1363,7 +1361,7 @@ class ResourceLister:
                 callback_params)
             callback(kmss_filtered_list, *callaback_params_sanitized)
 
-    def list_mq(self, filter, client, callback, callback_params):
+    def list_mq(self, client, filters, callback, callback_params):
         """
         Method to list mq
         :param client: directory boto3 client
@@ -1377,12 +1375,15 @@ class ResourceLister:
         paginator = client.get_paginator("list_brokers")
         pages = paginator.paginate()
         for page in pages:
-            tags = client.list_tags(ResourceArn = page["BrokerSummaries"]["BrokerArn"] )
-            mqs = {'BrokerSummaries' : page["BrokerSummaries"], 'Tags' : tags }
-            mqs_list.append(mqs)
+            for broker in  page["BrokerSummaries"]:
+                tags = client.list_tags(ResourceArn = broker["BrokerArn"] )
+                tags_list = [{"Key": key, "Value": value} for key, value in tags['Tags'].items()]
+                mqs = {'BrokerSummaries' : broker, 'Tags' : tags_list }
+                mqs_list.append(mqs)
         for mq in mqs_list:
-            if ResourceLister.evaluate_filters(mq, filter):
-                for tag in mq.get("Tags", []):
+            if ResourceLister.evaluate_filters(mq, filters):
+                tags_dict = mq.get("Tags", {})
+                for tag in tags_dict:
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         mqs_filtered_list.append(mq)
                         break
