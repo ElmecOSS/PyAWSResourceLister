@@ -1393,3 +1393,33 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(mqs_filtered_list, *callaback_params_sanitized)
+
+    def list_elasticache(self, client, filters, callback, callback_params):
+        """
+        Method to list elasticache
+        :param client: directory boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of elasticache
+        """
+        print(f"start list_elasticache {datetime.now()}")
+        elasticaches_list = []
+        elasticaches_filtered_list = []
+        paginator = client.get_paginator("describe_cache_clusters")
+        pages = paginator.paginate()
+        for page in pages:
+            tags = client.list_tags_for_resource(ResourceName = page["CacheClusters"][0]["ARN"] )
+            elasticache = {"ClusterInfo" : page["CacheClusters"], "Tags" : tags['TagList']}
+            elasticaches_list.append(elasticache)
+        
+        for cluster in  elasticaches_list:
+            if ResourceLister.evaluate_filters(cluster, filters): 
+                for tag in cluster.get("Tags", []):
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        elasticaches_filtered_list.append(cluster)
+                        break             
+        print(f"end list_elasticache {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(elasticaches_filtered_list, *callaback_params_sanitized)                   
