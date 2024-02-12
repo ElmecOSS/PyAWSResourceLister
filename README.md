@@ -37,7 +37,15 @@ AWSLister = ResourceLister(filter_tag_key, filter_tag_value)
 - SQS (Queues)
 - Directory Service
 - VPC (Subnets)
-
+- codepipeline (Pipelines)
+- codebuild (Projects)
+- directconnect (Connections)
+- dynamodb (NO SQL db)
+- fsxs (File System)
+- globalaccelerator (Accelerator)
+- KMS (Keys)
+- mq (Queue)
+- elasticache (Cache)
 # Key/Value Tags normalization
 ```
 tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}

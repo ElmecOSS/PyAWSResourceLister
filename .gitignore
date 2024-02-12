@@ -130,3 +130,12 @@ dmypy.json
 
 #maru file fuori dalle balle
 maru.py
+
+/atlantis
+/testing
+/aws
+/log
+loggers.py
+index.html
+main.py
+variable.txt
