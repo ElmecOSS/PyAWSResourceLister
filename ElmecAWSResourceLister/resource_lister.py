@@ -1170,7 +1170,7 @@ class ResourceLister:
                 callback_params)
             callback(codepipeline_filtered_list, *callaback_params_sanitized)
 
-    def list_codebuild(self, client,filters, callback, callback_params):
+    def list_codebuild(self, client, filters, callback, callback_params):
         """
         Method to list codebuild
         :param client: directory boto3 client
@@ -1184,10 +1184,10 @@ class ResourceLister:
         project_names = client.get_paginator("list_projects")
         project_names_pages = project_names.paginate()
         for project_name in project_names_pages:
-                p = [name for name in project_name['projects']]
-                paginator = client.batch_get_projects(names = p)
-                for page in paginator['projects']:
-                    codebuilds_list.append(page)
+            p = [name for name in project_name['projects']]
+            paginator = client.batch_get_projects(names=p)
+            for page in paginator['projects']:
+                codebuilds_list.append(page)
         for codebuild in codebuilds_list:
             if ResourceLister.evaluate_filters(codebuild, filters):
                 for tag in codebuild.get("tags", []):
@@ -1291,7 +1291,6 @@ class ResourceLister:
                 callback_params)
             callback(fsxs_filtered_list, *callaback_params_sanitized)
 
-
     def list_globalaccelerator(self, client, filters, callback, callback_params):
         """
         Method to list globalaccelerator
@@ -1303,13 +1302,12 @@ class ResourceLister:
         print(f"start list_globalaccelerator {datetime.now()}")
         globalaccelerators_list = []
         globalaccelerators_filtered_list = []
-        paginator = client.get_paginator("list_accelerators") 
+        paginator = client.get_paginator("list_accelerators")
         pages = paginator.paginate()
         for page in pages:
-            for  item in page["Accelerators"]:
-            
-                tags = client.list_tags_for_resource( ResourceArn = item['AcceleratorArn'])
-                accelarator = {"Accelerator": item,"Tags": tags['Tags']}
+            for item in page["Accelerators"]:
+                tags = client.list_tags_for_resource(ResourceArn=item['AcceleratorArn'])
+                accelarator = {"Accelerator": item, "Tags": tags['Tags']}
                 globalaccelerators_list.append(accelarator)
         for globalaccelerator in globalaccelerators_list:
             if ResourceLister.evaluate_filters(globalaccelerator, filters):
@@ -1338,23 +1336,23 @@ class ResourceLister:
         pages = paginator.paginate()
         for page in pages:
             for key in page['Keys']:
-                key_info = {'KeyId': key['KeyId'], 'KeyAliases': [], 'Tags' : []}
+                key_info = {'KeyId': key['KeyId'], 'KeyAliases': [], 'Tags': []}
                 paginator_aliases = client.get_paginator('list_aliases')
                 aliases_page = paginator_aliases.paginate(KeyId=key['KeyId'])
-                tags = client.list_resource_tags(KeyId = key['KeyArn'])
+                tags = client.list_resource_tags(KeyId=key['KeyArn'])
                 key_info['Tags'].extend(tags['Tags'])
                 for aliases in aliases_page:
-                    key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases'])  
-                if "alias/aws/" not in key_info['KeyAliases'][0]:          
+                    key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases'])
+                if "alias/aws/" not in key_info['KeyAliases'][0]:
                     kmss_list.append(key_info)
-        
+
         for kms in kmss_list:
             if ResourceLister.evaluate_filters(kms, filters):
                 for tag in kms.get("Tags", []):
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                      kmss_filtered_list.append(kms)           
-                      break
-                    
+                        kmss_filtered_list.append(kms)
+                        break
+
         print(f"end list_kms {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
@@ -1375,10 +1373,10 @@ class ResourceLister:
         paginator = client.get_paginator("list_brokers")
         pages = paginator.paginate()
         for page in pages:
-            for broker in  page["BrokerSummaries"]:
-                tags = client.list_tags(ResourceArn = broker["BrokerArn"] )
+            for broker in page["BrokerSummaries"]:
+                tags = client.list_tags(ResourceArn=broker["BrokerArn"])
                 tags_list = [{"Key": key, "Value": value} for key, value in tags['Tags'].items()]
-                mqs = {'BrokerSummaries' : broker, 'Tags' : tags_list }
+                mqs = {'BrokerSummaries': broker, 'Tags': tags_list}
                 mqs_list.append(mqs)
         for mq in mqs_list:
             if ResourceLister.evaluate_filters(mq, filters):
@@ -1408,18 +1406,18 @@ class ResourceLister:
         paginator = client.get_paginator("describe_cache_clusters")
         pages = paginator.paginate()
         for page in pages:
-            tags = client.list_tags_for_resource(ResourceName = page["CacheClusters"][0]["ARN"] )
-            elasticache = {"ClusterInfo" : page["CacheClusters"], "Tags" : tags['TagList']}
+            tags = client.list_tags_for_resource(ResourceName=page["CacheClusters"][0]["ARN"])
+            elasticache = {"ClusterInfo": page["CacheClusters"], "Tags": tags['TagList']}
             elasticaches_list.append(elasticache)
-        
-        for cluster in  elasticaches_list:
-            if ResourceLister.evaluate_filters(cluster, filters): 
+
+        for cluster in elasticaches_list:
+            if ResourceLister.evaluate_filters(cluster, filters):
                 for tag in cluster.get("Tags", []):
                     if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         elasticaches_filtered_list.append(cluster)
-                        break             
+                        break
         print(f"end list_elasticache {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(elasticaches_filtered_list, *callaback_params_sanitized)                   
+            callback(elasticaches_filtered_list, *callaback_params_sanitized)
