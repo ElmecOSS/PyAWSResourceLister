@@ -1351,7 +1351,7 @@ class ResourceLister:
         for kms in kmss_list:
             if ResourceLister.evaluate_filters(kms, filters):
                 for tag in kms.get("Tags", []):
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                    if tag["TagKey"] == self.filter_tag_key and tag["TagValue"] == self.filter_tag_value:
                       kmss_filtered_list.append(kms)           
                       break
                     
@@ -1422,4 +1422,67 @@ class ResourceLister:
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(elasticaches_filtered_list, *callaback_params_sanitized)                   
+            callback(elasticaches_filtered_list, *callaback_params_sanitized) 
+
+    def list_kinesis(self, client, filters, callback, callback_params):
+        """
+        Method to list kinesis
+        :param client: directory boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of kinesis
+        """
+        print(f"start list_kinesis {datetime.now()}")
+        kinesiss_list = []
+        kinesiss_filtered_list = []
+        paginator = client.get_paginator("list_streams")
+        pages = paginator.paginate()
+        for page in pages:
+            for stream in page["StreamNames"]:
+                tags = client.list_tags_for_stream(StreamName = stream)
+                kinesis = {"StreamName" : stream, "Tags" : tags['Tags']}
+                kinesiss_list.append(kinesis)
+        for kinesis in kinesiss_list:
+            if ResourceLister.evaluate_filters(kinesis, filters):
+                for tag in kinesis.get("Tags", []):
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        kinesiss_filtered_list.append(kinesis)
+                        break
+        print(f"end list_kinesis {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(kinesiss_filtered_list, *callaback_params_sanitized)
+
+
+    def list_glue(self, client_glue,client_sts, filters, callback, callback_params):
+        """
+        Method to list glue
+        :param client: directory boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of glue
+        """
+        print(f"start list_glue {datetime.now()}")
+        glues_list = []
+        glues_filtered_list = []
+        account_id = client_sts.get_caller_identity()["Account"]
+        region = client_sts.meta.region_name
+        paginator = client_glue.get_paginator('get_jobs')
+        pages = paginator.paginate()
+        for page in pages:
+            for database in page["Jobs"]:
+                tags = client_glue.get_tags(ResourceArn = f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}")
+                glue = {"DatabaseInfo" : database, "ARN":f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}", "Tags" : tags['Tags']}
+                glues_list.append(glue)
+        for glue in glues_list:
+            if ResourceLister.evaluate_filters(glue, filters):
+                for tagkey in glue.get("Tags", {}):
+                    if tagkey == self.filter_tag_key and glue['Tags'][tagkey] == self.filter_tag_value:
+                        glues_filtered_list.append(glue)
+                        break
+        print(f"end list_glue {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(glues_filtered_list, *callaback_params_sanitized)
