@@ -1419,7 +1419,7 @@ class ResourceLister:
         print(f"end list_elasticache {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-            callback(elasticaches_filtered_list, *callaback_params_sanitized) 
+            callback(elasticaches_filtered_list, *callaback_params_sanitized) )
 
     def list_kinesis(self, client, filters, callback, callback_params):
         """
