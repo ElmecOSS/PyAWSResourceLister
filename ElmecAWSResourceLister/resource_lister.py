@@ -1259,7 +1259,7 @@ class ResourceLister:
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(dynamodbs_list, *callaback_params_sanitized)
+            callback(dynamodbs_filtered_list, *callaback_params_sanitized)
 
     def list_fsxs(self, client, filters, callback, callback_params):
         """
@@ -1406,9 +1406,10 @@ class ResourceLister:
         paginator = client.get_paginator("describe_cache_clusters")
         pages = paginator.paginate()
         for page in pages:
-            tags = client.list_tags_for_resource(ResourceName=page["CacheClusters"][0]["ARN"])
-            elasticache = {"ClusterInfo": page["CacheClusters"], "Tags": tags['TagList']}
-            elasticaches_list.append(elasticache)
+            if page:
+                tags = client.list_tags_for_resource(ResourceName=page["CacheClusters"][0]["ARN"])
+                elasticache = {"ClusterInfo": page["CacheClusters"], "Tags": tags['TagList']}
+                elasticaches_list.append(elasticache)
 
         for cluster in elasticaches_list:
             if ResourceLister.evaluate_filters(cluster, filters):
@@ -1419,7 +1420,8 @@ class ResourceLister:
         print(f"end list_elasticache {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-            callback(elasticaches_filtered_list, *callaback_params_sanitized) )
+                callback_params)
+            callback(elasticaches_filtered_list, *callaback_params_sanitized)
 
     def list_kinesis(self, client, filters, callback, callback_params):
         """
