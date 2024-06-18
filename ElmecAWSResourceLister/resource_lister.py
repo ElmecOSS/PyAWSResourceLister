@@ -1350,9 +1350,9 @@ class ResourceLister:
             if ResourceLister.evaluate_filters(kms, filters):
                 for tag in kms.get("Tags", []):
                     if tag["TagKey"] == self.filter_tag_key and tag["TagValue"] == self.filter_tag_value:
-                      kmss_filtered_list.append(kms)           
-                      break
-                    
+                        kmss_filtered_list.append(kms)
+                        break
+
         print(f"end list_kms {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
@@ -1406,7 +1406,7 @@ class ResourceLister:
         paginator = client.get_paginator("describe_cache_clusters")
         pages = paginator.paginate()
         for page in pages:
-            if len(page) != 0:
+            if (len(page) != 0) and ("CacheClusters" in page):
                 tags = client.list_tags_for_resource(ResourceName=page["CacheClusters"][0]["ARN"])
                 elasticache = {"ClusterInfo": page["CacheClusters"], "Tags": tags['TagList']}
                 elasticaches_list.append(elasticache)
@@ -1438,9 +1438,9 @@ class ResourceLister:
         pages = paginator.paginate()
         for page in pages:
             for stream in page["StreamNames"]:
-                describe_stream = client.describe_stream(StreamName = stream)
-                tags = client.list_tags_for_stream(StreamName = stream)
-                kinesis = {"StreamInfo" : describe_stream['StreamDescription'], "Tags" : tags['Tags']}
+                describe_stream = client.describe_stream(StreamName=stream)
+                tags = client.list_tags_for_stream(StreamName=stream)
+                kinesis = {"StreamInfo": describe_stream['StreamDescription'], "Tags": tags['Tags']}
                 kinesiss_list.append(kinesis)
         for kinesis in kinesiss_list:
             if ResourceLister.evaluate_filters(kinesis, filters):
@@ -1452,9 +1452,9 @@ class ResourceLister:
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(kinesiss_filtered_list, *callaback_params_sanitized)    
+            callback(kinesiss_filtered_list, *callaback_params_sanitized)
 
-    def list_glue(self, client_glue,client_sts, filters, callback, callback_params):
+    def list_glue(self, client_glue, client_sts, filters, callback, callback_params):
         """
         Method to list glue
         :param client: directory boto3 client
@@ -1471,8 +1471,9 @@ class ResourceLister:
         pages = paginator.paginate()
         for page in pages:
             for database in page["Jobs"]:
-                tags = client_glue.get_tags(ResourceArn = f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}")
-                glue = {"DatabaseInfo" : database, "ARN":f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}", "Tags" : tags['Tags']}
+                tags = client_glue.get_tags(ResourceArn=f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}")
+                glue = {"DatabaseInfo": database, "ARN": f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}",
+                        "Tags": tags['Tags']}
                 glues_list.append(glue)
         for glue in glues_list:
             if ResourceLister.evaluate_filters(glue, filters):
@@ -1486,8 +1487,7 @@ class ResourceLister:
                 callback_params)
             callback(glues_filtered_list, *callaback_params_sanitized)
 
-
-    def list_glue(self, client_glue,client_sts, filters, callback, callback_params):
+    def list_glue(self, client_glue, client_sts, filters, callback, callback_params):
         """
         Method to list glue
         :param client: directory boto3 client
@@ -1504,8 +1504,9 @@ class ResourceLister:
         pages = paginator.paginate()
         for page in pages:
             for database in page["Jobs"]:
-                tags = client_glue.get_tags(ResourceArn = f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}")
-                glue = {"DatabaseInfo" : database, "ARN":f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}", "Tags" : tags['Tags']}
+                tags = client_glue.get_tags(ResourceArn=f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}")
+                glue = {"DatabaseInfo": database, "ARN": f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}",
+                        "Tags": tags['Tags']}
                 glues_list.append(glue)
         for glue in glues_list:
             if ResourceLister.evaluate_filters(glue, filters):
