@@ -485,7 +485,7 @@ class ResourceLister:
                 bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
                     "LocationConstraint"]
                 bucket_tags = {}
-                if bucket_location == region:
+                if (bucket_location == region) or (str.lower(bucket_location) in region):
                     try:
                         bucket_tags = client.get_bucket_tagging(
                             Bucket=bucket["Name"])
@@ -798,10 +798,8 @@ class ResourceLister:
                 resourceArn=registry["repositoryArn"])["tags"]
             if ResourceLister.evaluate_filters(registry, filters):
                 for tag in registries_tags:
-                    tags_are_none = ((self.filter_tag_key is None) and (self.filter_tag_value is None)) or ((self.filter_tag_key == "None") and (self.filter_tag_value == "None"))
+                    tags_are_none = ((self.filter_tag_key in ["", "None"]) and (self.filter_tag_value in ["", "None"]))
                     tags_match_aws = (tag["Key"] == self.filter_tag_key) and (tag["Value"] == self.filter_tag_value)
-                    print(f"tags_are_none {tags_are_none}")
-                    print(f"tags_match_aws {tags_match_aws}")
                     if tags_are_none or tags_match_aws:
                         registry["Tags"] = registries_tags
                         registries_filtered_list.append(registry)
@@ -1000,39 +998,6 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(identities_filtered_list, *callaback_params_sanitized)
-
-    def list_sns(self, client, filters, callback, callback_params):
-        """
-        Method to list SNS Topic filtered by tags
-        :param client: SNS boto3 client
-        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_topic
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of filtered SNS Topic
-        """
-        print(f"start list_sns {datetime.now()}")
-        topics_list = []
-        topics_filtered_list = []
-
-        paginator = client.get_paginator("list_topics")
-        pages = paginator.paginate()
-        for page in pages:
-            topics_list.extend(page["Topics"])
-
-        for topic in topics_list:
-            topic_tags = client.list_tags_for_resource(
-                ResourceArn=topic["TopicArn"])["Tags"]
-            if ResourceLister.evaluate_filters(topic, filters):
-                topic["Tags"] = topic_tags
-                for tag in topic["Tags"]:
-                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                        topics_filtered_list.append(topic)
-                        break
-        print(f"end list_sns {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(topics_filtered_list, *callaback_params_sanitized)
 
     def list_sqs(self, client, filters, callback, callback_params):
         """
@@ -1457,39 +1422,6 @@ class ResourceLister:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
             callback(kinesiss_filtered_list, *callaback_params_sanitized)
-
-    def list_glue(self, client_glue, client_sts, filters, callback, callback_params):
-        """
-        Method to list glue
-        :param client: directory boto3 client
-        :param callback: Method to be called after the listing
-        :param callback_params: Params to be passed to callback method
-        :return: list of glue
-        """
-        print(f"start list_glue {datetime.now()}")
-        glues_list = []
-        glues_filtered_list = []
-        account_id = client_sts.get_caller_identity()["Account"]
-        region = client_sts.meta.region_name
-        paginator = client_glue.get_paginator('get_jobs')
-        pages = paginator.paginate()
-        for page in pages:
-            for database in page["Jobs"]:
-                tags = client_glue.get_tags(ResourceArn=f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}")
-                glue = {"DatabaseInfo": database, "ARN": f"arn:aws:glue:{region}:{account_id}:job/{database['Name']}",
-                        "Tags": tags['Tags']}
-                glues_list.append(glue)
-        for glue in glues_list:
-            if ResourceLister.evaluate_filters(glue, filters):
-                for tagkey in glue.get("Tags", {}):
-                    if tagkey == self.filter_tag_key and glue['Tags'][tagkey] == self.filter_tag_value:
-                        glues_filtered_list.append(glue)
-                        break
-        print(f"end list_glue {datetime.now()}")
-        if callback:
-            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
-                callback_params)
-            callback(glues_filtered_list, *callaback_params_sanitized)
 
     def list_glue(self, client_glue, client_sts, filters, callback, callback_params):
         """
