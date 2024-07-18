@@ -798,7 +798,7 @@ class ResourceLister:
                 resourceArn=registry["repositoryArn"])["tags"]
             if ResourceLister.evaluate_filters(registry, filters):
                 for tag in registries_tags:
-                    tags_are_none = (self.filter_tag_key is None) and (self.filter_tag_value is None)
+                    tags_are_none = ((self.filter_tag_key is None) and (self.filter_tag_value is None)) or ((self.filter_tag_key == "None") and (self.filter_tag_value == "None"))
                     tags_match_aws = (tag["Key"] == self.filter_tag_key) and (tag["Value"] == self.filter_tag_value)
                     print(f"tags_are_none {tags_are_none}")
                     print(f"tags_match_aws {tags_match_aws}")
