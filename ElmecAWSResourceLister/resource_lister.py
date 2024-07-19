@@ -1181,7 +1181,7 @@ class ResourceLister:
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(codepipeline_filtered_list, *callaback_params_sanitized)
+            callback(repositories_filtered_list, *callaback_params_sanitized)
 
     def list_codebuild(self, client, filters, callback, callback_params):
         """
