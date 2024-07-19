@@ -41,6 +41,12 @@ class ResourceLister:
                 return False
         return True
 
+    def evaluate_filter_tag_key_and_value(self, tag):
+        tags_are_none = ((self.filter_tag_key in ["", "None"]) and (self.filter_tag_value in ["", "None"]))
+        tags_match_aws = (tag["Key"] == self.filter_tag_key) and (tag["Value"] == self.filter_tag_value)
+
+        return tags_are_none or tags_match_aws
+
     def list_acm(self, client, filters, callback, callback_params):
         """
         Method to list certificates filtered by tags
@@ -484,21 +490,24 @@ class ResourceLister:
             try:
                 bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
                     "LocationConstraint"]
-                bucket_tags = {}
-                if (bucket_location == region) or (str.lower(bucket_location) in region):
-                    try:
-                        bucket_tags = client.get_bucket_tagging(
-                            Bucket=bucket["Name"])
-                    except botoexception.ClientError as error:
-                        if not error.response['Error']['Code'] == "NoSuchTagSet":
-                            logger.error(error)
-                    bucket_tags = bucket_tags.get("TagSet", None)
-                    if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
-                        for tag in bucket_tags:
-                            if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                                bucket["Tags"] = bucket_tags
-                                bucket_list.append(bucket)
-                                break
+                if bucket_location is None:
+                    print(f'{bucket["Name"]} has region: {bucket_location}')
+                else:
+                    bucket_tags = {}
+                    if (bucket_location == region) or (str.lower(bucket_location) in region):
+                        try:
+                            bucket_tags = client.get_bucket_tagging(
+                                Bucket=bucket["Name"])
+                        except botoexception.ClientError as error:
+                            if not error.response['Error']['Code'] == "NoSuchTagSet":
+                                logger.error(error)
+                        bucket_tags = bucket_tags.get("TagSet", None)
+                        if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
+                            for tag in bucket_tags:
+                                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                                    bucket["Tags"] = bucket_tags
+                                    bucket_list.append(bucket)
+                                    break
             except botoexception.ClientError as error:
                 logger.error(error)
 
@@ -798,9 +807,10 @@ class ResourceLister:
                 resourceArn=registry["repositoryArn"])["tags"]
             if ResourceLister.evaluate_filters(registry, filters):
                 for tag in registries_tags:
-                    tags_are_none = ((self.filter_tag_key in ["", "None"]) and (self.filter_tag_value in ["", "None"]))
-                    tags_match_aws = (tag["Key"] == self.filter_tag_key) and (tag["Value"] == self.filter_tag_value)
-                    if tags_are_none or tags_match_aws:
+                    # tags_are_none = ((self.filter_tag_key in ["", "None"]) and (self.filter_tag_value in ["", "None"]))
+                    # tags_match_aws = (tag["Key"] == self.filter_tag_key) and (tag["Value"] == self.filter_tag_value)
+                    # if tags_are_none or tags_match_aws:
+                    if self.evaluate_filter_tag_key_and_value(tag):
                         registry["Tags"] = registries_tags
                         registries_filtered_list.append(registry)
                         break
@@ -1134,6 +1144,40 @@ class ResourceLister:
                         codepipeline_filtered_list.append(pipeline)
                         break
         print(f"end list_codepipeline {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(codepipeline_filtered_list, *callaback_params_sanitized)
+
+    def list_codecommit(self, client, filters, callback, callback_params):
+        """
+        Method to list codepipeline
+        :param client: directory boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered codepipeline
+        """
+        print(f"start list_repositories {datetime.now()}")
+        repositories_list = []
+        repositories_filtered_list = []
+
+        paginator = client.get_paginator("list_repositories")
+        pages = paginator.paginate()
+        for page in pages:
+            if len(page['repositories']) > 0:
+                for item in page['repositories']:
+                    response = client.get_repository(name=f"{item['repositoryName']}")
+                    tags = client.list_tags_for_resource(resourceArn=response['repositoryMetadata']['Arn'])
+                    codecommit = {'codecommit': response, 'Tags': tags['tags']}
+                    repositories_list.append(codecommit)
+
+        for codecommit in repositories_list:
+            if ResourceLister.evaluate_filters(codecommit, filters):
+                for tag in codecommit.get("Tags", []):
+                    if self.evaluate_filter_tag_key_and_value(tag):
+                        repositories_filtered_list.append(codecommit)
+                        break
+        print(f"end list_repositories {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
