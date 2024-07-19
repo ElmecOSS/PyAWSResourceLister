@@ -41,9 +41,9 @@ class ResourceLister:
                 return False
         return True
 
-    def evaluate_filter_tag_key_and_value(self, tag):
+    def evaluate_filter_tag_key_and_value(self, aws_tag_key, aws_tag_value):
         tags_are_none = ((self.filter_tag_key in ["", "None"]) and (self.filter_tag_value in ["", "None"]))
-        tags_match_aws = (tag["Key"] == self.filter_tag_key) and (tag["Value"] == self.filter_tag_value)
+        tags_match_aws = (aws_tag_key == self.filter_tag_key) and (aws_tag_value == self.filter_tag_value)
 
         return tags_are_none or tags_match_aws
 
@@ -810,7 +810,7 @@ class ResourceLister:
                     # tags_are_none = ((self.filter_tag_key in ["", "None"]) and (self.filter_tag_value in ["", "None"]))
                     # tags_match_aws = (tag["Key"] == self.filter_tag_key) and (tag["Value"] == self.filter_tag_value)
                     # if tags_are_none or tags_match_aws:
-                    if self.evaluate_filter_tag_key_and_value(tag):
+                    if self.evaluate_filter_tag_key_and_value(tag["Key"], tag["Value"]):
                         registry["Tags"] = registries_tags
                         registries_filtered_list.append(registry)
                         break
@@ -1166,15 +1166,15 @@ class ResourceLister:
         for page in pages:
             if len(page['repositories']) > 0:
                 for item in page['repositories']:
-                    response = client.get_repository(name=f"{item['repositoryName']}")
+                    response = client.get_repository(repositoryName=f"{item['repositoryName']}")
                     tags = client.list_tags_for_resource(resourceArn=response['repositoryMetadata']['Arn'])
-                    codecommit = {'codecommit': response, 'Tags': tags['tags']}
+                    codecommit = {'codecommit': response['repositoryMetadata'], 'Tags': tags['tags']}
                     repositories_list.append(codecommit)
 
         for codecommit in repositories_list:
             if ResourceLister.evaluate_filters(codecommit, filters):
                 for tag in codecommit.get("Tags", []):
-                    if self.evaluate_filter_tag_key_and_value(tag):
+                    if self.evaluate_filter_tag_key_and_value(tag, codecommit['Tags'][tag]):
                         repositories_filtered_list.append(codecommit)
                         break
         print(f"end list_repositories {datetime.now()}")
