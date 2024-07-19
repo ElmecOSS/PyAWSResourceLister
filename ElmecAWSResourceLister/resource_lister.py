@@ -1169,7 +1169,7 @@ class ResourceLister:
                     response = client.get_repository(repositoryName=f"{item['repositoryName']}")
                     tags = client.list_tags_for_resource(resourceArn=response['repositoryMetadata']['Arn'])
                     normalized_tags = []
-                    for tag_key in tags:
+                    for tag_key in tags['tags']:
                         tmp_obj = {
                             "Key": tag_key,
                             "Value": tags[tag_key],
