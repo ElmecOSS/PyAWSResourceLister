@@ -1168,13 +1168,21 @@ class ResourceLister:
                 for item in page['repositories']:
                     response = client.get_repository(repositoryName=f"{item['repositoryName']}")
                     tags = client.list_tags_for_resource(resourceArn=response['repositoryMetadata']['Arn'])
-                    codecommit = {'codecommit': response['repositoryMetadata'], 'Tags': tags['tags']}
+                    normalized_tags = []
+                    for tag_key in tags:
+                        tmp_obj = {
+                            "Key": tag_key,
+                            "Value": tags[tag_key],
+                        }
+                        normalized_tags.append(tmp_obj)
+
+                    codecommit = {'codecommit': response['repositoryMetadata'], 'Tags': normalized_tags}
                     repositories_list.append(codecommit)
 
         for codecommit in repositories_list:
             if ResourceLister.evaluate_filters(codecommit, filters):
                 for tag in codecommit.get("Tags", []):
-                    if self.evaluate_filter_tag_key_and_value(tag, codecommit['Tags'][tag]):
+                    if self.evaluate_filter_tag_key_and_value(tag["Key"], tag["Value"]):
                         repositories_filtered_list.append(codecommit)
                         break
         print(f"end list_repositories {datetime.now()}")
