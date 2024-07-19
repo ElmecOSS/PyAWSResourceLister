@@ -1172,7 +1172,7 @@ class ResourceLister:
                     for tag_key in tags['tags']:
                         tmp_obj = {
                             "Key": tag_key,
-                            "Value": tags[tag_key],
+                            "Value": tags['tags'][tag_key],
                         }
                         normalized_tags.append(tmp_obj)
 
