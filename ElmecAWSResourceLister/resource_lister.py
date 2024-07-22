@@ -1134,13 +1134,21 @@ class ResourceLister:
                 for item in page['pipelines']:
                     response = client.get_pipeline(name=f"{item['name']}")
                     tags = client.list_tags_for_resource(resourceArn=response['metadata']['pipelineArn'])
-                    codepipeline = {'Pipeline': response, 'Tags': tags['tags']}
+                    normalized_tags = []
+                    for tag_obj in tags['tags']:
+                        tmp_obj = {
+                            "Key": tag_obj['key'],
+                            "Value": tag_obj['value']
+                        }
+                        normalized_tags.append(tmp_obj)
+
+                    codepipeline = {'Pipeline': response, 'Tags': normalized_tags}
                     codepipeline_lists.append(codepipeline)
 
         for pipeline in codepipeline_lists:
             if ResourceLister.evaluate_filters(pipeline, filters):
                 for tag in pipeline.get("Tags", []):
-                    if tag["key"] == self.filter_tag_key and tag["value"] == self.filter_tag_value:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
                         codepipeline_filtered_list.append(pipeline)
                         break
         print(f"end list_codepipeline {datetime.now()}")
