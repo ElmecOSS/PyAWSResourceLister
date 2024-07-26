@@ -1435,7 +1435,7 @@ class ResourceLister:
         paginator = client.get_paginator("describe_cache_clusters")
         pages = paginator.paginate()
         for page in pages:
-            if (len(page) != 0) and ("CacheClusters" in page):
+            if (len(page) != 0) and ("CacheClusters" in page) and (len(page['CacheClusters']) > 0):
                 tags = client.list_tags_for_resource(ResourceName=page["CacheClusters"][0]["ARN"])
                 elasticache = {"ClusterInfo": page["CacheClusters"], "Tags": tags['TagList']}
                 elasticaches_list.append(elasticache)
