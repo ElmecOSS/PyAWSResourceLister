@@ -1009,6 +1009,25 @@ class ResourceLister:
                 callback_params)
             callback(identities_filtered_list, *callaback_params_sanitized)
 
+    def check_ses_in_production(self, client, filters, callback, callback_params):
+        """
+        Method to check if ses is out of sandbox
+        :param client: ses boto3 client
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: if ses in a specific region is out of sandbox or not
+        """
+        print(f"start check_ses_in_production {datetime.now()}")
+        is_ses_out_of_sandbox = False
+        sending_quota = client.get_send_quota()
+        if sending_quota['Max24HourSend'] > 0:
+            is_ses_out_of_sandbox = True
+        print(f"end check_ses_in_production {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(is_ses_out_of_sandbox, *callaback_params_sanitized)
+
     def list_sqs(self, client, filters, callback, callback_params):
         """
         Method to list sqs queue filtered by tags
