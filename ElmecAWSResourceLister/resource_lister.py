@@ -1029,7 +1029,6 @@ class ResourceLister:
             queues_url_list.extend(page.get("QueueUrls", []))
 
         for queue_url in queues_url_list:
-            queue["QueueUrl"] = queue_url
             queues_tags = client.list_queue_tags(
                 QueueUrl=queue_url).get("Tags", {})
             if ResourceLister.evaluate_filters(queue_url, filters):
@@ -1037,9 +1036,12 @@ class ResourceLister:
                     # Tag Key/Value normalization
                     # tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
                     # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
-                    queue["Tags"] = [
-                        {"Key": k, "Value": v} for k, v in queues_tags.items()]
-                    queues_filtered_list.append(queue)
+                    queues_filtered_list.append(
+                        {
+                            "QueueUrl": queue_url,
+                            "Tags": [{"Key": k, "Value": v} for k, v in queues_tags.items()]
+                        }
+                    )
         print(f"end list_sqs {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
