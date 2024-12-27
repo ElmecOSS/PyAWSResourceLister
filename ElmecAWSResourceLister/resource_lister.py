@@ -1020,13 +1020,13 @@ class ResourceLister:
         print(f"start check_ses_in_production {datetime.now()}")
         is_ses_out_of_sandbox = False
         sending_quota = client.get_send_quota()
-        if sending_quota['Max24HourSend'] > 0:
+        if sending_quota['Max24HourSend'] > 200:
             is_ses_out_of_sandbox = True
         print(f"end check_ses_in_production {datetime.now()}")
         if callback:
             callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
                 callback_params)
-            callback(is_ses_out_of_sandbox, *callaback_params_sanitized)
+            callback([{"is_ses_out_of_sandbox": is_ses_out_of_sandbox}], *callaback_params_sanitized)
 
     def list_sqs(self, client, filters, callback, callback_params):
         """
