@@ -878,8 +878,14 @@ class ResourceLister:
         for page in pages:
             clusters_arn_list.extend(page["clusterArns"])
 
-        clusters_list = client.describe_clusters(
-            clusters=clusters_arn_list)["clusters"]
+        max_size = 50
+        for i in range(0, len(clusters_arn_list)):
+            start_index = i * max_size
+            end_index = (i + 1) * max_size
+            clusters_sub_list = clusters_arn_list[start_index:end_index]
+            if len(clusters_sub_list):
+                described_clusters = client.describe_clusters(clusters=clusters_sub_list)["clusters"]
+                clusters_list.extend(described_clusters)
 
         for cluster in clusters_list:
             # Tags from "describe_clusters" seems to be broken, retrieved with the specific call
@@ -1234,10 +1240,11 @@ class ResourceLister:
         project_names = client.get_paginator("list_projects")
         project_names_pages = project_names.paginate()
         for project_name in project_names_pages:
-            p = [name for name in project_name['projects']]
-            paginator = client.batch_get_projects(names=p)
-            for page in paginator['projects']:
-                codebuilds_list.append(page)
+            if len(project_name['projects']) > 0:
+                p = [name for name in project_name['projects']]
+                paginator = client.batch_get_projects(names=p)
+                for page in paginator['projects']:
+                    codebuilds_list.append(page)
         for codebuild in codebuilds_list:
             if ResourceLister.evaluate_filters(codebuild, filters):
                 for tag in codebuild.get("tags", []):
@@ -1386,15 +1393,18 @@ class ResourceLister:
         pages = paginator.paginate()
         for page in pages:
             for key in page['Keys']:
-                key_info = {'KeyId': key['KeyId'], 'KeyAliases': [], 'Tags': []}
-                paginator_aliases = client.get_paginator('list_aliases')
-                aliases_page = paginator_aliases.paginate(KeyId=key['KeyId'])
-                tags = client.list_resource_tags(KeyId=key['KeyArn'])
-                key_info['Tags'].extend(tags['Tags'])
-                for aliases in aliases_page:
-                    key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases'])
-                if "alias/aws/" not in key_info['KeyAliases'][0]:
-                    kmss_list.append(key_info)
+                try:
+                    key_info = {'KeyId': key['KeyId'], 'KeyAliases': [], 'Tags': []}
+                    paginator_aliases = client.get_paginator('list_aliases')
+                    aliases_page = paginator_aliases.paginate(KeyId=key['KeyId'])
+                    tags = client.list_resource_tags(KeyId=key['KeyArn'])
+                    key_info['Tags'].extend(tags['Tags'])
+                    for aliases in aliases_page:
+                        key_info['KeyAliases'].extend(alias['AliasName'] for alias in aliases['Aliases'])
+                    if "alias/aws/" not in key_info['KeyAliases'][0]:
+                        kmss_list.append(key_info)
+                except Exception as e:
+                    print(e)
 
         for kms in kmss_list:
             if ResourceLister.evaluate_filters(kms, filters):
