@@ -491,23 +491,23 @@ class ResourceLister:
                 bucket_location = client.get_bucket_location(Bucket=bucket["Name"])[
                     "LocationConstraint"]
                 if bucket_location is None:
-                    print(f'{bucket["Name"]} has region: {bucket_location}')
-                else:
-                    bucket_tags = {}
-                    if (bucket_location == region) or (str.lower(bucket_location) in region):
-                        try:
-                            bucket_tags = client.get_bucket_tagging(
-                                Bucket=bucket["Name"])
-                        except botoexception.ClientError as error:
-                            if not error.response['Error']['Code'] == "NoSuchTagSet":
-                                logger.error(error)
-                        bucket_tags = bucket_tags.get("TagSet", None)
-                        if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
-                            for tag in bucket_tags:
-                                if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
-                                    bucket["Tags"] = bucket_tags
-                                    bucket_list.append(bucket)
-                                    break
+                    print(f'{bucket["Name"]} has region: {bucket_location} so I set us-east-1')
+                    bucket_location = 'us-east-1'
+                bucket_tags = {}
+                if (bucket_location == region) or (str.lower(bucket_location) in region):
+                    try:
+                        bucket_tags = client.get_bucket_tagging(
+                            Bucket=bucket["Name"])
+                    except botoexception.ClientError as error:
+                        if not error.response['Error']['Code'] == "NoSuchTagSet":
+                            logger.error(error)
+                    bucket_tags = bucket_tags.get("TagSet", None)
+                    if ResourceLister.evaluate_filters(bucket, filters) and bucket_tags is not None:
+                        for tag in bucket_tags:
+                            if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                                bucket["Tags"] = bucket_tags
+                                bucket_list.append(bucket)
+                                break
             except botoexception.ClientError as error:
                 logger.error(error)
 
