@@ -908,6 +908,60 @@ class ResourceLister:
                 callback_params)
             callback(clusters_filtered_list, *callaback_params_sanitized)
 
+    def list_ecs_service(self, client, filters, callback, callback_params):
+        """
+        Method to list ECS Clusters filtered by tags
+        :param client: ECS boto3 client
+        :param filters: Maps list of filters. Those filters are manually checked. the key is the name of the attribute to check from the object, and the value is the value you expect as value. The attributes you can use are the once in the response of the boto3's method: describe_domain
+        :param callback: Method to be called after the listing
+        :param callback_params: Params to be passed to callback method
+        :return: list of filtered OpeECSnSearch Clusters
+        """
+        print(f"start list_ecs_service {datetime.now()}")
+        clusters_list = []
+        clusters_arn_list = []
+        services_filtered_list = []
+
+        paginator = client.get_paginator("list_clusters")
+        pages = paginator.paginate()
+        for page in pages:
+            clusters_arn_list.extend(page["clusterArns"])
+
+        clusters_list = client.describe_clusters(clusters=clusters_arn_list)["clusters"]
+
+        for cluster in clusters_list:
+            # Tags from "describe_clusters" seems to be broken, retrieved with the specific call
+            cluster_tags = client.list_tags_for_resource(resourceArn=cluster["clusterArn"])["tags"]
+            if ResourceLister.evaluate_filters(cluster, filters):
+                # Tags = [{'key': 'Tag1', 'value': 'Value1'},{'key': 'Tag2', 'value': 'Value2'}]
+                # Tags = [{'Key': 'Tag1', 'Value': 'Value1'},{'Key': 'Tag2', 'Value': 'Value2'}]
+                cluster["Tags"] = []
+                for tag in cluster_tags:
+                    cluster["Tags"].append(
+                        {"Key": tag["key"], "Value": tag["value"]})
+                for tag in cluster["Tags"]:
+                    if tag["Key"] == self.filter_tag_key and tag["Value"] == self.filter_tag_value:
+                        service_paginator = client.get_paginator("list_services")
+                        service_pages = service_paginator.paginate(cluster=cluster['clusterArn'])
+                        services_list = []
+                        for page in service_pages:
+                            services_list.extend(page["serviceArns"])
+
+                        tmp_services_list = []
+                        for service_arn in services_list:
+                            tmp_services_list.append({
+                                "service_arn": service_arn,
+                                "cluster": cluster
+                            })
+
+                        services_filtered_list.extend(tmp_services_list)
+                        break
+        print(f"end list_ecs_service {datetime.now()}")
+        if callback:
+            callaback_params_sanitized = ResourceLister.callaback_params_sanitize(
+                callback_params)
+            callback(services_filtered_list, *callaback_params_sanitized)
+
     def list_route53(self, client, filters, callback, callback_params):
         """
         Method to list Route53 Domains filtered by tags
