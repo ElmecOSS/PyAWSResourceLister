@@ -1614,7 +1614,7 @@ class ResourceLister:
         user_pools_filtered_list = []
         account_id = client_sts.get_caller_identity()["Account"]
         region = client_sts.meta.region_name
-        paginator = client_cognito.get_paginator('list_user_pools')
+        paginator = client_cognito.get_paginator('list_user_pools', MaxResults = 60)
         pages = paginator.paginate()
         for page in pages:
             for user_pool in page["UserPools"]:
