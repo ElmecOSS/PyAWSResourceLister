@@ -1601,7 +1601,7 @@ class ResourceLister:
                 callback_params)
             callback(glues_filtered_list, *callaback_params_sanitized)
 
-    def list_cognito(self, client_cognito, client_sts, filters, callback, callback_params):
+    def list_cognito_user_pool(self, client_cognito, client_sts, filters, callback, callback_params):
         """
         Method to list cognito
         :param client: directory boto3 client
@@ -1609,7 +1609,7 @@ class ResourceLister:
         :param callback_params: Params to be passed to callback method
         :return: list of cognito user pool
         """
-        print(f"start list_cognito {datetime.now()}")
+        print(f"start list_cognito_user_pool {datetime.now()}")
         user_pools_list = []
         user_pools_filtered_list = []
         account_id = client_sts.get_caller_identity()["Account"]
@@ -1635,7 +1635,7 @@ class ResourceLister:
                         user_pools_filtered_list.append(user_pool)
                         break
 
-        print(f"end list_cognito {datetime.now()}")
+        print(f"end list_cognito_user_pool {datetime.now()}")
         if callback:
             callback_params_sanitized = ResourceLister.callaback_params_sanitize(callback_params)
             callback(user_pools_filtered_list, *callback_params_sanitized)
