@@ -46,6 +46,7 @@ AWSLister = ResourceLister(filter_tag_key, filter_tag_value)
 - KMS (Keys)
 - mq (Queue)
 - elasticache (Cache)
+- cognito (Cognito)
 # Key/Value Tags normalization
 ```
 tags = {'Tag1': 'Value1', 'Tag2': 'Value2'}
