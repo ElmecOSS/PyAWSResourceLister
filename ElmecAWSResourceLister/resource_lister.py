@@ -678,7 +678,7 @@ class ResourceLister:
                         api["Tags"] = [
                             {"Key": k, "Value": v} for k, v in api["tags"].items()]
                         api_filtered_list.append(api)
-                        break
+                        #break
 
         # apigateway
         elif client._service_model.service_name == "apigateway":
@@ -696,7 +696,7 @@ class ResourceLister:
                         api["Tags"] = [
                             {"Key": k, "Value": v} for k, v in api["tags"].items()]
                         api_filtered_list.append(api)
-                        break
+                        #break
 
         print(f"end list_apigateway {datetime.now()}")
         if callback:
